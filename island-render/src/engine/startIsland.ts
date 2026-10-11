@@ -1,4 +1,5 @@
 import { ImageProcessingConfiguration, Scene, SceneInstrumentation, Vector3 } from "@babylonjs/core";
+import { createCharacter, type Character } from "../character/character";
 import { createCharacterPlaceholder } from "../character/placeholder";
 import { createWater } from "../water/water";
 import { AssetLibrary } from "../world/assets";
@@ -33,9 +34,10 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     [camera.alpha, camera.beta, camera.radius] = cam;
   }
   const { shadows, skyReflection } = createSkyAndLight(scene);
-  createTerrain(scene);
+  const terrain = createTerrain(scene);
   const water = createWater(scene, skyReflection.cubeTexture);
-  createCharacterPlaceholder(scene, shadows, new Vector3(-1.4, terrainHeight(-1.4, -0.6), -0.6), -0.9);
+  const characterStart = new Vector3(-1.4, terrainHeight(-1.4, -0.6), -0.6);
+  let character: Character | null = null;
 
   const library = new AssetLibrary(scene, shadows);
   library.onProgress = (s) => statsStore.set({ assetsLoaded: s.loaded, assetsTotal: s.total });
@@ -48,6 +50,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   scene.onBeforeRenderObservable.add(() => {
     water.update((performance.now() - start) / 1000);
     library.update(camera.position);
+    character?.update(Math.min(engine.getDeltaTime(), 100) / 1000);
   });
   scene.onAfterRenderObservable.add(() => {
     if ((statTimer += engine.getDeltaTime()) < 500) return;
@@ -63,7 +66,16 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   window.addEventListener("resize", () => engine.resize());
 
   try {
-    await buildBeach(library, scene, shadows);
+    await Promise.all([
+      buildBeach(library, scene, shadows),
+      createCharacter(scene, shadows, terrain, characterStart)
+        .then((c) => (character = c))
+        .catch((err) => {
+          // Keep the scene usable if the character file is missing or broken.
+          console.error("IO_Character_A failed to load, using placeholder", err);
+          createCharacterPlaceholder(scene, shadows, characterStart, -0.9);
+        }),
+    ]);
     statsStore.set({ ready: true });
   } catch (err) {
     console.error(err);

@@ -10,6 +10,7 @@ const FILES = [
   "bush/IO_Bush_Tropical_B.glb",
   "bush/IO_Bush_Tropical_C.glb",
   "campfire_stone/IO_Campfire_Stone_A.glb",
+  "character/IO_Character_A.glb",
   "fern/IO_Fern_A.glb",
   "fiber/IO_Fiber_Binding_A_Coil.glb",
   "grass/IO_Grass_Clump_A.glb",

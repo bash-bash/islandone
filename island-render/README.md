@@ -19,7 +19,7 @@ URL-Parameter:
 | `?renderer=webgl2` | WebGL 2 erzwingen (zum Vergleich mit WebGPU) |
 | `?cam=alpha,beta,radius,x,y,z` | feste Kameraposition, z. B. für Vergleichs-Screenshots |
 
-Steuerung: linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Oben links zeigt das HUD Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
+Steuerung: linke Maustaste drehen (ein kurzer Klick auf den Sand schickt den Charakter dorthin), rechte Maustaste verschieben, Mausrad zoomen. Oben links zeigt das HUD Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
 
 Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`, `library`), z. B. für den Babylon-Inspector.
 
@@ -34,7 +34,7 @@ Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`
 | Wasser | erste Fassung: Tiefenfarbe und Transparenz, zwei laufende Normal-Maps, Fresnel-Spiegelung des Himmels, Uferschaum, der an den Strand läuft | `src/water/water.ts` |
 | Assets | 24 GLBs, LOD-Umschaltung nach Kameradistanz, Collider ausgeblendet; wiederholte Teile als Thin Instances (ein Draw Call pro Mesh) | `src/world/assets.ts` |
 | Szene | Hütte, Werkbank, Feuerstelle (Steinring, Feuerholz, Dreibein aus Stangen, Flammen, Rauch, flackerndes Licht), Holzstapel, Bretter, Steg aus Stangen und Planken, Felsen, Möwe, Seesterne, Palmen, Büsche, Farne, Gras | `src/world/beachLayout.ts`, `src/world/camp.ts` |
-| Charakter | **Platzhalter** (Kapsel, 1,75 m), bis `IO_Character_A` exportiert ist | `src/character/placeholder.ts` |
+| Charakter | `IO_Character_A` mit Idle und Walk (weich überblendet). Läuft für den Test selbstständig zwischen Feuer, Holzstapel, Werkbank und Ufer hin und her; ein Klick auf den Sand schickt ihn dorthin. Noch ohne Kollision und Wegfindung. Fällt auf eine Kapsel zurück, wenn das GLB fehlt | `src/character/character.ts`, `placeholder.ts` |
 | HUD | React über dem Canvas | `src/ui/` |
 
 Weitere Platzhalter: Kisten (Boxen), Kochtopf (Halbkugel). Feuer, Rauch und Schaum entstehen im Browser, wie in der Asset-Liste vorgesehen.
@@ -65,7 +65,7 @@ Läuft über SwiftShader (Software-Rendering), die FPS im HUD sind dort bedeutun
 ## Nächste Schritte
 
 1. `IO_Terrain_Beach_Test_30m` und `IO_Seafloor_Test_30m` in Blender, dann `terrain.ts` ersetzen.
-2. `IO_Character_A` mit Idle und Walk einsetzen.
+2. Charakter: Kollision mit Hütte, Feuer und Holz; weitere Clips (PickUp, Carry…) an Aktionen hängen, sobald island-sim Aktionen liefert.
 3. Wasser als eigener Shader: Refraktion, Kaustiken auf dem Meeresboden, Schaum an Felsen und Steg.
 4. Wind für Palmen, Gras und Farne (die GLBs haben schon Wind-Gewichte in `TEXCOORD_1/2`).
 5. Kisten, Topf und weitere fehlende Requisiten aus der Asset-Liste.
