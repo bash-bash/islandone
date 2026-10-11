@@ -16,11 +16,13 @@ import { WATER_LEVEL, waterDepth } from "../world/terrain";
 // - two normal maps scrolling in different directions (bump + clear-coat bump)
 // - Fresnel reflection of the sky capture
 // - shoreline foam band moving in and out, updated on the CPU for shallow vertices only
-// Refraction, caustics and a proper shader come with the water step later.
+// Caustics live in caustics.ts. Refraction and a proper shader come with the water step later.
 
-const SHALLOW = new Color3(0.36, 0.86, 0.82);
-const MID = new Color3(0.07, 0.6, 0.72);
-const DEEP = new Color3(0.03, 0.27, 0.45);
+// Linear colours: the post-process pipeline blends in linear space, so these look
+// much lighter on screen than their numbers suggest.
+const SHALLOW = new Color3(0.03, 0.62, 0.55);
+const MID = new Color3(0.0, 0.3, 0.42);
+const DEEP = new Color3(0.0, 0.08, 0.24);
 const FOAM = new Color3(0.97, 0.99, 1.0);
 
 /** Grid axis coordinates: 0.5 m steps around the beach, coarser towards the horizon. */
@@ -45,7 +47,7 @@ function depthColor(depth: number, out: { r: number; g: number; b: number; a: nu
     out.b = MID.b + (DEEP.b - MID.b) * t;
   }
   // Shallow water is clear enough to show the sand, deep water is nearly opaque.
-  out.a = Math.min(0.92, 0.18 + d * 0.22);
+  out.a = Math.min(0.96, 0.42 + d * 0.36);
 }
 
 export interface Water {
@@ -107,7 +109,7 @@ export function createWater(scene: Scene, reflection: BaseTexture): Water {
   mat.metallic = 0;
   mat.roughness = 0.08;
   mat.reflectionTexture = reflection;
-  mat.environmentIntensity = 0.9;
+  mat.environmentIntensity = 0.7;
   mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
   mat.backFaceCulling = false;
   mat.forceDepthWrite = false;

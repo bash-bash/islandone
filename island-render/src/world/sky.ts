@@ -14,8 +14,8 @@ import {
   type Mesh,
 } from "@babylonjs/core";
 
-const ZENITH = new Color3(0.27, 0.56, 0.9);
-const HORIZON = new Color3(0.78, 0.9, 0.97);
+const ZENITH = new Color3(0.16, 0.5, 0.96);
+const HORIZON = new Color3(0.68, 0.87, 1.0);
 const SUN_DIR = new Vector3(-0.55, -1, 0.45).normalize();
 
 export interface SkyAndLight {
@@ -34,7 +34,7 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
   scene.clearColor = new Color4(HORIZON.r, HORIZON.g, HORIZON.b, 1);
   scene.ambientColor = new Color3(0.25, 0.25, 0.25);
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogDensity = 0.0045;
+  scene.fogDensity = 0.0028;
   scene.fogColor = HORIZON.clone();
 
   const sky = MeshBuilder.CreateSphere("sky", { diameter: 1000, segments: 24, sideOrientation: 1 }, scene);
@@ -60,14 +60,14 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
   sky.isPickable = false;
 
   const hemi = new HemisphericLight("skyFill", new Vector3(0.2, 1, -0.1), scene);
-  hemi.intensity = 0.75;
-  hemi.diffuse = new Color3(0.85, 0.93, 1.0);
-  hemi.groundColor = new Color3(0.62, 0.52, 0.38); // bounce light off the sand
+  hemi.intensity = 0.95;
+  hemi.diffuse = new Color3(0.78, 0.9, 1.0);
+  hemi.groundColor = new Color3(0.8, 0.72, 0.6); // bounce light off the sand
 
   const sun = new DirectionalLight("sun", SUN_DIR, scene);
   sun.position = SUN_DIR.scale(-60);
-  sun.intensity = 2.6;
-  sun.diffuse = new Color3(1.0, 0.94, 0.82);
+  sun.intensity = 3.3;
+  sun.diffuse = new Color3(1.0, 0.96, 0.88);
   sun.shadowMinZ = 1;
   sun.shadowMaxZ = 140;
 
@@ -76,7 +76,7 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
   shadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
   shadows.bias = 0.0015;
   shadows.normalBias = 0.02;
-  shadows.darkness = 0.35;
+  shadows.darkness = 0.3;
 
   const skyReflection = new ReflectionProbe("skyProbe", 128, scene);
   skyReflection.renderList!.push(sky);

@@ -1,6 +1,7 @@
-import { ImageProcessingConfiguration, Scene, SceneInstrumentation, Vector3 } from "@babylonjs/core";
+import { Scene, SceneInstrumentation, Vector3 } from "@babylonjs/core";
 import { createCharacter, type Character } from "../character/character";
 import { createCharacterPlaceholder } from "../character/placeholder";
+import { createCaustics } from "../water/caustics";
 import { createWater } from "../water/water";
 import { AssetLibrary } from "../world/assets";
 import { buildBeach } from "../world/beachLayout";
@@ -8,6 +9,7 @@ import { createSkyAndLight } from "../world/sky";
 import { loadTerrain, terrainHeight } from "../world/terrain";
 import { createOrbitCamera } from "./camera";
 import { createEngine } from "./createEngine";
+import { setupLook } from "./look";
 import { statsStore } from "./stats";
 
 export async function startIsland(canvas: HTMLCanvasElement) {
@@ -17,15 +19,6 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   const scene = new Scene(engine);
   scene.skipPointerMovePicking = true;
 
-  // Tone mapping and a touch of contrast/saturation for the stylised look (handoff §22).
-  const ip = scene.imageProcessingConfiguration;
-  ip.toneMappingEnabled = true;
-  ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-  ip.exposure = 1.05;
-  ip.contrast = 1.12;
-  ip.vignetteEnabled = true;
-  ip.vignetteWeight = 1.2;
-
   const camera = createOrbitCamera(scene, canvas, new Vector3(-1.5, 0.8, 1));
   // ?cam=alpha,beta,radius,x,y,z reproduces a view, e.g. for comparing screenshots.
   const cam = new URLSearchParams(location.search).get("cam")?.split(",").map(Number);
@@ -34,7 +27,9 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     [camera.alpha, camera.beta, camera.radius] = cam;
   }
   const { shadows, skyReflection } = createSkyAndLight(scene);
+  setupLook(scene, camera);
   const terrain = await loadTerrain(scene);
+  const caustics = createCaustics(scene, terrain);
   const water = createWater(scene, skyReflection.cubeTexture);
   const characterStart = new Vector3(-1.4, terrainHeight(-1.4, -0.6), -0.6);
   let character: Character | null = null;
@@ -48,7 +43,9 @@ export async function startIsland(canvas: HTMLCanvasElement) {
 
   const start = performance.now();
   scene.onBeforeRenderObservable.add(() => {
-    water.update((performance.now() - start) / 1000);
+    const t = (performance.now() - start) / 1000;
+    water.update(t);
+    caustics.update(t);
     library.update(camera.position);
     character?.update(Math.min(engine.getDeltaTime(), 100) / 1000);
   });
