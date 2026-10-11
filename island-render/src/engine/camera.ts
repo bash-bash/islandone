@@ -5,8 +5,9 @@ import { ArcRotateCamera, Vector3, type Scene } from "@babylonjs/core";
  * rotate freely around the focus, zoom, and tilt within a readable range.
  */
 export function createOrbitCamera(scene: Scene, canvas: HTMLCanvasElement, target: Vector3) {
-  // alpha = -π/4 puts the sea (+X) to the right of and in front of the camp, as in the reference image.
-  const camera = new ArcRotateCamera("orbit", -Math.PI / 4, 0.9, 30, target, scene);
+  // Start view framed like the reference image: hut top centre, fire left, sea and pier right.
+  // Closer than this cuts off the hut and pier, because our camp is spread wider than the reference.
+  const camera = new ArcRotateCamera("orbit", -1.05, 1.0, 20, target, scene);
   camera.fov = 0.6; // slightly telephoto, flatter perspective like the reference
   camera.lowerBetaLimit = 0.35; // steepest top-down tilt
   camera.upperBetaLimit = 1.4; // flat enough to see the horizon and clouds, never down to ground level

@@ -23,7 +23,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   const scene = new Scene(engine);
   scene.skipPointerMovePicking = true;
 
-  const camera = createOrbitCamera(scene, canvas, new Vector3(-1.5, 0.8, 1));
+  const camera = createOrbitCamera(scene, canvas, new Vector3(-0.8, 0.5, -1.8));
   // ?cam=alpha,beta,radius,x,y,z reproduces a view, e.g. for comparing screenshots.
   const cam = new URLSearchParams(location.search).get("cam")?.split(",").map(Number);
   if (cam?.length === 6 && cam.every(Number.isFinite)) {
