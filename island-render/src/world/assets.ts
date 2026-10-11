@@ -1,4 +1,5 @@
 import {
+  Color3,
   LoadAssetContainerAsync,
   Matrix,
   Mesh,
@@ -66,6 +67,8 @@ export interface Placement {
   rotation?: Vector3;
   rotationY?: number;
   scale?: number | Vector3;
+  /** Per-instance colour multiplier (thin instances only); values above 1 are allowed. */
+  color?: Color3;
 }
 
 const LOD_NAME = /_LOD(\d)$/;
@@ -198,6 +201,14 @@ export class AssetLibrary {
       const buffer = new Float32Array(placementMatrices.length * 16);
       placementMatrices.forEach((d, i) => w.multiply(d).multiply(wInv).copyToArray(buffer, i * 16));
       mesh.thinInstanceSetBuffer("matrix", buffer, 16, true);
+      if (placements.some((p) => p.color)) {
+        const colors = new Float32Array(placements.length * 4);
+        placements.forEach((p, i) => {
+          const c = p.color ?? Color3.White();
+          colors.set([c.r, c.g, c.b, 1], i * 4);
+        });
+        mesh.thinInstanceSetBuffer("color", colors, 4, true);
+      }
       mesh.thinInstanceRefreshBoundingInfo(false);
       mesh.receiveShadows = true;
       mesh.alwaysSelectAsActiveMesh = false;

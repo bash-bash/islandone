@@ -75,7 +75,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
 
   try {
     await Promise.all([
-      buildBeach(library, scene, shadows),
+      buildBeach(library, scene),
       createCharacter(scene, shadows, (m) => terrain.includes(m), characterStart)
         .then((c) => (character = c))
         .catch((err) => {
@@ -101,7 +101,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     // Contact shadows: skip dense ground cover (grass, ferns) and the pebbles' tiny blobs.
     createContactShadows(
       scene,
-      candidates.filter((m) => !(m instanceof Mesh && m.thinInstanceCount > 40) && !/^(Pebbles|Starfish)/.test(m.name)),
+      candidates.filter((m) => !(m instanceof Mesh && m.thinInstanceCount > 40 && !m.name.startsWith("Crates")) && !/^(Pebbles|Starfish)/.test(m.name)),
     );
     statsStore.set({ ready: true });
   } catch (err) {
