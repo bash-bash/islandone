@@ -42,13 +42,13 @@
     "step_m": 0.5,
     "columns": 229,
     "rows": 193,
-    "min_m": -6.1500563621521,
-    "max_m": 6.818795680999756
+    "min_m": -6.14831018447876,
+    "max_m": 6.851605415344238
   },
   "assets": {
     "IO_Terrain_Beach_Test_30m": {
       "file": "IO_Terrain_Beach_Test_30m.glb",
-      "glb_kb": 1178,
+      "glb_kb": 1237,
       "extent_x_m": [
         -24.0,
         6.0
@@ -67,7 +67,7 @@
     },
     "IO_Seafloor_Test_30m": {
       "file": "IO_Seafloor_Test_30m.glb",
-      "glb_kb": 597,
+      "glb_kb": 619,
       "extent_x_m": [
         6.0,
         36.0
@@ -86,7 +86,7 @@
     },
     "IO_Terrain_Surround_Test": {
       "file": "IO_Terrain_Surround_Test.glb",
-      "glb_kb": 888,
+      "glb_kb": 909,
       "extent_x_m": [
         -48.0,
         66.0

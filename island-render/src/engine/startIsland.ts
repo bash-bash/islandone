@@ -6,6 +6,7 @@ import { buildFoamField } from "../water/foamField";
 import { createWater } from "../water/water";
 import { AssetLibrary } from "../world/assets";
 import { buildBeach } from "../world/beachLayout";
+import { createContactShadows } from "../world/contactShadows";
 import { createSkyAndLight, HORIZON, ZENITH } from "../world/sky";
 import { windState } from "../world/wind";
 import { loadTerrain, terrainHeight } from "../world/terrain";
@@ -97,6 +98,11 @@ export async function startIsland(canvas: HTMLCanvasElement) {
         !(characterRoot && m.isDescendantOf(characterRoot)),
     );
     water.setFoamField(buildFoamField(scene, candidates));
+    // Contact shadows: skip dense ground cover (grass, ferns) and the pebbles' tiny blobs.
+    createContactShadows(
+      scene,
+      candidates.filter((m) => !(m instanceof Mesh && m.thinInstanceCount > 40) && !/^(Pebbles|Starfish)/.test(m.name)),
+    );
     statsStore.set({ ready: true });
   } catch (err) {
     console.error(err);

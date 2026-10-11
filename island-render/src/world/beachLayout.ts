@@ -132,6 +132,20 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene, shadows: Shado
     0,
     "Stones_Underwater",
   );
+  // Small pebbles in loose clusters on the dry sand (the reference is full of them).
+  const pebbleRand = rng(35);
+  const pebbles: Placement[] = [];
+  for (const c of scatterArea(36, 16, { x: [-9, 5], z: [-13, 13] }, { scale: [1, 1], minHeight: 0.35 })) {
+    const n = 4 + Math.floor(pebbleRand() * 6);
+    for (let i = 0; i < n; i++) {
+      const a = pebbleRand() * Math.PI * 2;
+      const r = Math.sqrt(pebbleRand()) * 0.8;
+      const x = c.position.x + Math.cos(a) * r;
+      const z = c.position.z + Math.sin(a) * r;
+      pebbles.push({ position: new Vector3(x, terrainHeight(x, z) - 0.01, z), rotationY: pebbleRand() * 6.3, scale: 0.22 + pebbleRand() * 0.35 });
+    }
+  }
+  scatter("IO_Stone_Small_A", pebbles, 1, "Pebbles");
   scatter(
     "IO_Starfish_A",
     [
@@ -139,6 +153,8 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene, shadows: Shado
       { position: at(5.6, 3.5, 0.005), rotationY: 1.9 },
       { position: at(3.8, 5.2, 0.005), rotationY: 3.1, scale: 0.8 },
       { position: at(7.5, -2.5, 0.005), rotationY: 5.0, scale: 1.2 },
+      { position: at(1.2, -4.2, 0.005), rotationY: 2.2, scale: 0.9 },
+      { position: at(4.9, 8.1, 0.005), rotationY: 4.4, scale: 1.1 },
     ],
     0,
     "Starfish",

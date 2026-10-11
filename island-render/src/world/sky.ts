@@ -16,7 +16,7 @@ import { createCloudTexture } from "./textures";
 
 export const ZENITH = new Color3(0.16, 0.5, 0.96);
 export const HORIZON = new Color3(0.68, 0.87, 1.0);
-const SUN_DIR = new Vector3(-0.55, -1, 0.45).normalize();
+const SUN_DIR = new Vector3(-0.7, -0.85, 0.5).normalize(); // ~40° high: soft relief and longer shadows like the reference
 
 export interface SkyAndLight {
   sky: Mesh;
