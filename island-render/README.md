@@ -21,7 +21,7 @@ URL-Parameter:
 | `?post=0` | Nachbearbeitung (Farbkorrektur, Bloom) aus |
 | `?ao=1` | Ambient Occlusion (SSAO) an, nur zum Ausprobieren: dunkelt den Meeresboden durch das Wasser ab und kostet viel |
 
-Steuerung: WASD oder Pfeiltasten laufen (relativ zur Kamera), Shift rennt, ein kurzer Klick auf den Sand schickt den Charakter dorthin. Die Kamera folgt dem Charakter, sobald er läuft, und behält dabei Blickwinkel und Abstand. Linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Oben links zeigt das HUD Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
+Kamera: linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Die Figur steuert man nicht; sie handelt selbst (siehe Charakter). Oben links zeigt das HUD Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
 
 Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`, `library`), z. B. für den Babylon-Inspector.
 
@@ -39,7 +39,7 @@ Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`
 | Wind | Palmen, Büsche, Farne und Gras wiegen sich im Wind (Material-Plugin im Vertex-Shader, GLSL und WGSL): langsames Schwingen nach Höhe, Böen, Blattflattern, jede Pflanze phasenversetzt. Die Schatten bleiben in Ruhelage | `src/world/wind.ts`, Einstellungen je Asset in `assets.ts` |
 | Assets | 24 GLBs, LOD-Umschaltung nach Kameradistanz, Collider ausgeblendet; wiederholte Teile als Thin Instances (ein Draw Call pro Mesh) | `src/world/assets.ts` |
 | Szene | Hütte, Werkbank, Feuerstelle (Steinring, Feuerholz, Dreibein aus Stangen, Flammen, Rauch, flackerndes Licht), Holzstapel, Bretter, Kisten aus Brettern, Seilrollen, Steg aus Stangen und Planken, Felsen, Felsinseln im Meer, Kieselgruppen im Sand, Möwe, Seesterne, Palmen. Dichter Dschungelrand aus Büschen, Farnen und Gras in Gruppen, Grün am Fuß der Felsen, Grasbüschel, die auf den Sand auslaufen, rote Akzentpflanzen; jede Pflanze bekommt per Instanzfarbe einen eigenen Grünton | `src/world/beachLayout.ts`, `src/world/camp.ts` |
-| Charakter | `IO_Character_A` mit Idle und Walk (weich überblendet), spielbar: Tastatur oder Klick. Kollision in 2D: Hüttenwände (die Tür ist begehbar), Palmenstämme, Felsen, Werkbank aus den `_COL`-Proxys der Assets, dazu Holzstapel, Kisten und Feuerstelle. Der Steg ist begehbar, tiefes Wasser nicht; Büsche und Farne halten nicht auf. Rennen spielt Walk schneller ab, bis es einen Run-Clip gibt. Keine Wegfindung: per Klick läuft er gerade und gleitet an Hindernissen entlang. Fällt auf eine Kapsel zurück, wenn das GLB fehlt | `src/character/character.ts`, `playerControl.ts`, `collision.ts`, `placeholder.ts` |
+| Charakter | `IO_Character_A` mit Idle und Walk (weich überblendet). Autonom, der Zuschauer steuert nicht: bis island-sim die Figur über `goTo` bewegt, läuft sie zwischen Feuer, Holzstapel, Werkbank und Ufer hin und her. Kollision in 2D: Hüttenwände (die Tür ist begehbar), Palmenstämme, Felsen, Werkbank aus den `_COL`-Proxys der Assets, dazu Holzstapel, Kisten und Feuerstelle; der Steg ist begehbar, tiefes Wasser nicht. Keine Wegfindung: sie läuft gerade und gleitet an Hindernissen entlang. Fällt auf eine Kapsel zurück, wenn das GLB fehlt | `src/character/character.ts`, `collision.ts`, `placeholder.ts` |
 | HUD | React über dem Canvas | `src/ui/` |
 
 Weitere Platzhalter: Kochtopf (Halbkugel). Feuer, Rauch und Schaum entstehen im Browser, wie in der Asset-Liste vorgesehen.
@@ -69,7 +69,7 @@ Läuft über SwiftShader (Software-Rendering), die FPS im HUD sind dort bedeutun
 
 ## Nächste Schritte
 
-1. Charakter: Wegfindung, Run-Clip; weitere Clips (PickUp, Carry…) an Aktionen hängen, sobald island-sim Aktionen liefert.
+1. Charakter: Wegfindung; weitere Clips (PickUp, Carry…) an Aktionen hängen, sobald island-sim Aktionen liefert.
 2. Wasser: Brechung (Verzerrung des Bodens), echte Wellen, Schaum auch außerhalb des Strandtest-Bereichs (Distanzfeld deckt nur x −14…34, z −28…28 ab). Meeresboden am Steg tiefer modellieren, damit das Wasser dort dunkler wird wie im Zielbild.
 3. Wind auch in den Schatten; Wind-Gewichte aus den GLBs (`TEXCOORD_1`) nutzen statt der Höhe, sobald die Palmen sie auch haben.
 4. Kisten, Topf und weitere fehlende Requisiten aus der Asset-Liste.

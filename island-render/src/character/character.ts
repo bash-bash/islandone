@@ -11,20 +11,27 @@ import "@babylonjs/loaders/glTF";
 import { moveWithCollision, type CollisionWorld } from "./collision";
 
 // IO_Character_A (assets/character/character.json): 1.75 m, Mixamo skeleton, faces +Z.
-// Driven by the player (playerControl.ts): a move direction from the keyboard, or a point to
-// walk to from a click. Walks straight, slides along obstacles (collision.ts); no path finding.
+// IslandOne's figure is autonomous; the viewer watches and does not steer it. Until
+// island-sim drives it through `goTo`, it wanders between camp spots on its own and idles in
+// between. Walks straight and slides along obstacles (collision.ts); no path finding.
 
 const URL = import.meta.env.BASE_URL + "assets/character/IO_Character_A.glb";
 const WALK_SPEED = 1.25; // m/s, matches the in-place Walk clip at this scale
-const RUN_FACTOR = 2; // no Run clip yet: the Walk clip plays faster
-const TURN_SPEED = 8; // rad/s
-const BLEND_SPEED = 5; // weight per second
+const TURN_SPEED = 6; // rad/s
+const BLEND_SPEED = 4; // weight per second
+
+/** Stand-in behaviour until island-sim: places it likes to go to (fire, woodpile, workbench, shore, camp). */
+const SPOTS: [number, number][] = [
+  [-2.6, -1.6],
+  [1.0, -2.9],
+  [-1.5, 4.4],
+  [3.4, 1.5],
+  [-1.4, -0.6],
+];
 
 export interface Character {
   root: TransformNode;
-  /** Keyboard input: world-space direction on the ground (length 0…1), or null to stop. */
-  drive(direction: Vector3 | null, run: boolean): void;
-  /** Click input: walk to a point; cancelled by keyboard input. */
+  /** Walk to a point on the ground (the hook for island-sim). */
   goTo(point: Vector3): void;
   setCollision(world: CollisionWorld): void;
   update(dt: number): void;
@@ -70,18 +77,13 @@ export async function createCharacter(
   }
 
   let target: Vector3 | null = null;
-  let input: Vector3 | null = null;
-  let running = false;
   let world: CollisionWorld = { circles: [], boxes: [], decks: [] };
   let stuckFor = 0;
+  let idleFor = 1;
+  let spot = 0;
 
   return {
     root,
-    drive(direction, run) {
-      input = direction && direction.lengthSquared() > 1e-4 ? direction : null;
-      running = run;
-      if (input) target = null;
-    },
     goTo(point) {
       target = point.clone();
       stuckFor = 0;
@@ -91,19 +93,23 @@ export async function createCharacter(
     },
     update(dt: number) {
       let move: Vector3 | null = null;
-      let speed = WALK_SPEED * (running ? RUN_FACTOR : 1);
-      if (input) {
-        move = input.clone();
-        speed *= Math.min(1, input.length());
-      } else if (target) {
+      let speed = WALK_SPEED;
+      if (target) {
         const to = target.subtract(root.position);
         to.y = 0;
         const dist = to.length();
-        if (dist < 0.1 || stuckFor > 0.6) target = null;
-        else {
+        if (dist < 0.1 || stuckFor > 0.6) {
+          target = null;
+          idleFor = 3 + Math.random() * 4;
+        } else {
           move = to;
           speed = Math.min(speed, dist / Math.max(dt, 1e-3));
         }
+      } else if ((idleFor -= dt) <= 0) {
+        spot = (spot + 1 + Math.floor(Math.random() * (SPOTS.length - 1))) % SPOTS.length;
+        const [x, z] = SPOTS[spot];
+        target = new Vector3(x, 0, z);
+        stuckFor = 0;
       }
 
       let walking = false;
@@ -123,7 +129,6 @@ export async function createCharacter(
       } else {
         root.position.copyFrom(moveWithCollision(world, root.position, 0, 0));
       }
-      walk.speedRatio = running && walking ? RUN_FACTOR : 1;
 
       // Cross-fade between Idle and Walk.
       for (const g of loops) {

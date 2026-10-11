@@ -2,7 +2,6 @@ import { type AbstractMesh, Mesh, Scene, SceneInstrumentation, Vector3 } from "@
 import { createCharacter, type Character } from "../character/character";
 import { buildCollisionWorld, type CollisionWorld } from "../character/collision";
 import { createCharacterPlaceholder } from "../character/placeholder";
-import { attachPlayerControl } from "../character/playerControl";
 import { createCaustics } from "../water/caustics";
 import { buildFoamField } from "../water/foamField";
 import { createWater } from "../water/water";
@@ -46,7 +45,6 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   const characterStart = new Vector3(-1.4, terrainHeight(-1.4, -0.6), -0.6);
   let character: Character | null = null;
   let collision: CollisionWorld | null = null;
-  let player: ReturnType<typeof attachPlayerControl> | null = null;
 
   const library = new AssetLibrary(scene, shadows);
   library.onProgress = (s) => statsStore.set({ assetsLoaded: s.loaded, assetsTotal: s.total });
@@ -63,7 +61,6 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     windState.time = t;
     library.update(camera.position);
     const dt = Math.min(engine.getDeltaTime(), 100) / 1000;
-    player?.update(dt);
     character?.update(dt);
   });
   scene.onAfterRenderObservable.add(() => {
@@ -83,10 +80,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     const [collisionExtras] = await Promise.all([
       buildBeach(library, scene),
       createCharacter(scene, shadows, characterStart)
-        .then((c) => {
-          character = c;
-          player = attachPlayerControl(scene, camera, c, (m) => terrain.includes(m));
-        })
+        .then((c) => (character = c))
         .catch((err) => {
           // Keep the scene usable if the character file is missing or broken.
           console.error("IO_Character_A failed to load, using placeholder", err);
