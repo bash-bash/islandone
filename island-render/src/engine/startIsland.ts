@@ -19,8 +19,8 @@ import { hardwareScaling, pickQuality } from "./quality";
 import { statsStore } from "./stats";
 
 export async function startIsland(canvas: HTMLCanvasElement) {
-  const { engine, renderer } = await createEngine(canvas);
   const quality = pickQuality();
+  const { engine, renderer } = await createEngine(canvas, quality.forceWebGL2);
   engine.setHardwareScalingLevel(hardwareScaling(quality));
   statsStore.set({ renderer, quality: quality.level });
 
@@ -54,6 +54,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
 
   const library = new AssetLibrary(scene, shadows);
   library.lodScale = quality.lodScale;
+  library.plantShadowRing = quality.plantShadowRing;
   library.onProgress = (s) => statsStore.set({ assetsLoaded: s.loaded, assetsTotal: s.total });
 
   const instrumentation = new SceneInstrumentation(scene);
@@ -110,7 +111,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
         !/_LOD[1-9]$|_COL(_\d+)?$|^sky$|^clouds$/.test(m.name) &&
         !(characterRoot && m.isDescendantOf(characterRoot)),
     );
-    water.setFoamField(buildFoamField(scene, candidates));
+    if (quality.foam) water.setFoamField(buildFoamField(scene, candidates));
     // The water only needs the depth of what lies under or at it: skip vegetation and props up on
     // the beach, which saves a whole extra pass over the jungle.
     water.setDepthCasters(

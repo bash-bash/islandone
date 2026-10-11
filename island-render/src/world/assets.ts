@@ -105,6 +105,8 @@ export class AssetLibrary {
   readonly stats: LibraryStats = { loaded: 0, total: 0 };
   /** Quality profile factor on all LOD switch distances. */
   lodScale = 1;
+  /** Scattered plants (assets with wind) cast shadows only at this LOD level or nearer; -1 never. */
+  plantShadowRing = 1;
   onProgress?: (stats: LibraryStats) => void;
 
   constructor(
@@ -214,7 +216,8 @@ export class AssetLibrary {
       mesh.thinInstanceRefreshBoundingInfo(false);
       mesh.receiveShadows = true;
       mesh.alwaysSelectAsActiveMesh = false;
-      if (def.castShadow) this.shadows.addShadowCaster(mesh, false);
+      const plant = Boolean((def as AssetDef).wind);
+      if (def.castShadow && (!plant || lodLevel <= this.plantShadowRing)) this.shadows.addShadowCaster(mesh, false);
     }
     return meshes;
   }

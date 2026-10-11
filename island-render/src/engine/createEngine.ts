@@ -4,12 +4,13 @@ export type RendererKind = "WebGPU" | "WebGL2";
 
 /**
  * WebGPU when the browser supports it, WebGL 2 otherwise.
- * `?renderer=webgl2` forces the fallback for comparison.
+ * `?renderer=webgl2` (or the LOW quality profile) forces the fallback.
  */
 export async function createEngine(
   canvas: HTMLCanvasElement,
+  preferWebGL2 = false,
 ): Promise<{ engine: AbstractEngine; renderer: RendererKind }> {
-  const forced = new URLSearchParams(location.search).get("renderer");
+  const forced = preferWebGL2 ? "webgl2" : new URLSearchParams(location.search).get("renderer");
 
   if (forced !== "webgl2" && (await WebGPUEngine.IsSupportedAsync)) {
     try {
