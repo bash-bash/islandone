@@ -125,9 +125,12 @@ export async function buildCampfire(lib: AssetLibrary, scene: Scene, cx: number,
  * Simple pier from the modular kit: pole posts, pole stringers and long planks as decking.
  * Runs from the beach (startX) out to sea along +X at the given z.
  */
+/** Half the deck width: IO_Plank_Long_A is 3 m long and lies across the pier. */
+const DECK_HALF = 1.5;
+
 export async function buildDock(lib: AssetLibrary, startX: number, length: number, z: number) {
   const deckY = 0.5; // low over the water, like the reference
-  const halfWidth = 1.15;
+  const halfWidth = 1.15; // stringers under the deck
   const pitch = 0.27; // plank width 0.25 m + gap
 
   const planks: Placement[] = [];
@@ -146,16 +149,25 @@ export async function buildDock(lib: AssetLibrary, startX: number, length: numbe
     }
   }
 
+  // Thick posts outside the deck edge, standing proud of it, as in the reference.
   const posts: Placement[] = [];
-  const postHeight = 3; // down to the sandy shelf under the pier (~-1.7 m)
+  const postHeight = 3.2; // down to the sandy shelf under the pier (~-1.7 m)
+  const postThick = 1.5; // IO_Pole_Long_A is 0.17 m across
+  const postOut = DECK_HALF + 0.085 * postThick;
   for (let x = startX + 0.2; x <= startX + length + 0.01; x += (length - 0.4) / 3) {
     for (const side of [-1, 1]) {
-      const top = deckY + 0.35 + (side > 0 ? 0.05 : 0);
+      const top = deckY + 0.6 + (((x * 7) | 0) % 3) * 0.06;
       posts.push({
-        position: new Vector3(x, top - postHeight / 2, z + side * halfWidth),
+        position: new Vector3(x, top - postHeight / 2, z + side * postOut),
         rotation: new Vector3(0, 0, Math.PI / 2),
-        scale: new Vector3(postHeight / 3, 1, 1), // IO_Pole_Long_A is 3 m
+        scale: new Vector3(postHeight / 3, postThick, postThick), // IO_Pole_Long_A is 3 m
       });
+    }
+  }
+  // Edge logs along both sides on top of the plank ends, lashed against the posts.
+  for (let x = startX + 1.5; x < startX + length; x += 2.9) {
+    for (const side of [-1, 1]) {
+      stringers.push({ position: new Vector3(x, deckY + 0.07, z + side * (DECK_HALF - 0.06)), scale: new Vector3(1, 1.1, 1.1) });
     }
   }
 
