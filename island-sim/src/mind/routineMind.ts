@@ -1,33 +1,52 @@
 import type { Rng } from "../core/rng";
-import type { Action, Features, Feelings, Mind, Observation, Purpose } from "./types";
+import { BeliefStore, type BeliefChange, type Effect } from "./beliefs";
+import { categoryOf } from "./categories";
+import { EpisodicMemory } from "./memory";
+import type { Action, Features, Feelings, Mind, MindEvent, Observation, Purpose } from "./types";
+
+type Use = "drink" | "eat";
 
 /**
- * Stage-2 character: innate drives and simple experience, no reasoning yet.
+ * The character (stages 2–3): innate drives, plus beliefs and memories built
+ * only from its own experience.
  *
- * What it brings along (innate, not world knowledge): thirst wants water-looking
- * things, hunger wants food-looking things, tiredness wants sleep under cover.
- * What it learns: where places and things are, how long ways take, and per
- * individual thing whether drinking/eating it helped or hurt (including nausea
- * hours later, attributed to what it ate recently).
+ * Innate (not world knowledge): thirst wants water-looking things, hunger wants
+ * food-looking things, tiredness wants sleep under cover, and a vague
+ * expectation that such things usually help.
  *
- * Not yet: beliefs about kinds of things, analogy, hypotheses, experiments
- * (stages 3–5). So it has to find out separately that each patch of sea is salty.
+ * Learned:
+ * - where places and things are and how long ways take
+ * - beliefs about categories of things it groups by look (src/mind/categories):
+ *   "drinking vast wavy water makes thirst worse" holds for every patch of sea,
+ *   so it does not have to taste each one (learning transfer)
+ * - episodic memory; nausea is blamed on what was eaten in the hours before
+ *
+ * Every decision that comes out differently than it would have with innate
+ * expectations alone is reported as "learning.applied" (Handoff §5: learning
+ * must change behaviour).
+ *
+ * Not yet: analogy between categories, hypotheses, experiments (stages 4–5).
  */
 export class RoutineMind implements Mind {
   private here: string | null = null;
+  private now = 0;
   private readonly places = new Map<string, { features: Features; exits: readonly string[]; visited: boolean }>();
-  private readonly things = new Map<string, { place: string; features: Features }>();
+  private readonly things = new Map<string, { place: string; features: Features; category: string }>();
   private readonly travel = new Map<string, number>();
-  private readonly experience = new Map<string, { good: number; bad: number }>();
+  private readonly beliefs = new BeliefStore();
+  private readonly memory = new EpisodicMemory();
+  private readonly knownCategories = new Set<string>();
+  private readonly pendingMealChecks: { tick: number; category: string }[] = [];
   private feelings: Feelings = { thirst: 0, hunger: 0, tired: 0, cold: 0, wet: 0, nausea: 0, pain: 0 };
   private sky: Features = { light: "light", rain: false, wind: "light" };
-  private readonly recentMeals: { thing: string; tick: number }[] = [];
   private lastMove: { from: string; to: string } | null = null;
+  private events: MindEvent[] = [];
 
   constructor(private readonly rng: Rng) {}
 
   observe(observations: readonly Observation[]): void {
     for (const o of observations) {
+      this.now = o.tick;
       switch (o.kind) {
         case "place":
           this.here = o.place;
@@ -36,9 +55,16 @@ export class RoutineMind implements Mind {
             if (!this.places.has(exit)) this.places.set(exit, { features: {}, exits: [], visited: false });
           }
           break;
-        case "thing":
-          this.things.set(o.thing, { place: o.place, features: o.features });
+        case "thing": {
+          const category = categoryOf(o.features);
+          this.things.set(o.thing, { place: o.place, features: o.features, category });
+          if (!this.knownCategories.has(category)) {
+            this.knownCategories.add(category);
+            this.memory.remember({ tick: o.tick, kind: "discovered", place: o.place, thing: o.thing, category, salience: 0.6 });
+            this.emit("category.discovered", { category, thing: o.thing });
+          }
           break;
+        }
         case "sky":
           this.sky = o.features;
           break;
@@ -51,17 +77,19 @@ export class RoutineMind implements Mind {
           break;
       }
     }
+    this.settleMealChecks();
   }
 
-  decide(): Action {
+  decide(tick: number): Action {
+    this.now = tick;
     const f = this.feelings;
     const dark = this.sky.light === "dark";
     const exposed = this.sky.rain === true && (this.sky.wind === "strong" || f.cold >= 2 || f.wet >= 3);
     const urgency: [Purpose, number][] = [
       ["drink", f.thirst + 0.3],
       ["eat", f.hunger],
-      // Too cold to fall asleep: getting out of the rain comes first.
       // Day-night rhythm: sleep comes easily in the dark; by day only when very tired.
+      // Too cold to fall asleep: getting out of the rain comes first.
       ["sleep", f.tired + (dark ? 1.6 : -1) - (f.tired === 0 ? 2 : 0) - (f.cold >= 3 ? 3 : 0)],
       ["shelter", exposed || f.cold >= 3 ? 2 + f.cold * 0.5 : 0],
     ];
@@ -77,6 +105,12 @@ export class RoutineMind implements Mind {
       if (explore) return explore;
     }
     return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: 30, purpose: "idle" };
+  }
+
+  drainEvents(): MindEvent[] {
+    const out = this.events;
+    this.events = [];
+    return out;
   }
 
   // --- goals ---------------------------------------------------------------
@@ -102,23 +136,45 @@ export class RoutineMind implements Mind {
     }
   }
 
-  private consume(kind: "drink" | "eat", need: number): Action | null {
-    const desperate = need >= 4;
-    let best: { thing: string; place: string; value: number } | null = null;
+  /** Expected benefit of using a category: chance it helps and works, minus a penalty for harm. */
+  private expectation(category: string, use: Use, innateHelp: number, learned: boolean): number {
+    const b = this.beliefs;
+    const p = (e: Effect) => (learned ? b.confidence(category, use, e, innateHelp) : b.innate(e, innateHelp));
+    return p("helps") * (1 - p("fails")) - 1.5 * p("harms");
+  }
+
+  private consume(use: Use, need: number): Action | null {
+    const threshold = need >= 4 ? -0.6 : 0.1;
+    type Choice = { thing: string; place: string; category: string; value: number };
+    let learned: Choice | null = null;
+    let innate: Choice | null = null;
     for (const [id, t] of this.things) {
-      const prior = kind === "drink" ? drinkPrior(t.features) : eatPrior(t.features);
+      const prior = use === "drink" ? drinkPrior(t.features) : eatPrior(t.features);
       if (prior <= 0 || t.features.amount === "none") continue;
-      const e = this.experience.get(`${kind}:${id}`) ?? { good: 0, bad: 0 };
-      const score = (e.good + prior) / (e.good + e.bad + 1);
-      if (score < (desperate ? 0.05 : 0.25)) continue;
       const cost = this.distance(t.place);
       if (cost === null) continue;
-      const value = score - cost / 240 + this.rng.range(0, 0.05);
-      if (!best || value > best.value) best = { thing: id, place: t.place, value };
+      const jitter = this.rng.range(0, 0.05);
+      const base = -cost / 240 + jitter;
+      const withLearning = this.expectation(t.category, use, prior, true);
+      const withoutLearning = this.expectation(t.category, use, prior, false);
+      if (withLearning >= threshold && (!learned || withLearning + base > learned.value)) {
+        learned = { thing: id, place: t.place, category: t.category, value: withLearning + base };
+      }
+      if (withoutLearning >= threshold && (!innate || withoutLearning + base > innate.value)) {
+        innate = { thing: id, place: t.place, category: t.category, value: withoutLearning + base };
+      }
     }
-    if (!best) return this.exploreStep() ?? null;
-    if (best.place === this.here) return { kind, target: best.thing, purpose: kind };
-    return this.stepTowards(best.place, kind);
+    if (learned?.category !== innate?.category) {
+      // Experience made the character choose differently than instinct would have.
+      this.emit("learning.applied", {
+        use,
+        chosen: learned?.category ?? null,
+        instead: innate?.category ?? null,
+      });
+    }
+    if (!learned) return this.exploreStep() ?? null;
+    if (learned.place === this.here) return { kind: use, target: learned.thing, purpose: use };
+    return this.stepTowards(learned.place, use);
   }
 
   private exploreStep(): Action | null {
@@ -155,33 +211,87 @@ export class RoutineMind implements Mind {
       this.travel.set(`${this.lastMove.to}>${this.lastMove.from}`, o.minutes);
     }
     if (a.kind !== "drink" && a.kind !== "eat") return;
-    if (o.felt.result === "none left") {
-      const t = this.things.get(a.target);
-      if (t) this.things.set(a.target, { ...t, features: { ...t.features, amount: "none" } });
+    const thing = this.things.get(a.target);
+    if (!thing) return;
+    const { category } = thing;
+    const prior = a.kind === "drink" ? drinkPrior(thing.features) : eatPrior(thing.features);
+    const learn = (effect: Effect, holds: boolean, weight = 1) =>
+      this.recordChange(this.beliefs.update(category, a.kind as Use, effect, holds, o.tick, weight, prior));
+
+    const result = o.felt.result;
+    if (result === "none left") {
+      this.things.set(a.target, { ...thing, features: { ...thing.features, amount: "none" } });
       return;
     }
-    const key = `${a.kind}:${a.target}`;
-    const e = this.experience.get(key) ?? { good: 0, bad: 0 };
+    if (result === "cannot eat this" || result === "nothing to drink") {
+      learn("helps", false);
+      return;
+    }
+    if (!o.success) {
+      learn("fails", true);
+      this.memory.remember({ tick: o.tick, kind: "failed", place: thing.place, thing: a.target, category, salience: 0.4 });
+      return;
+    }
+    learn("fails", false, 0.5);
     const relief = a.kind === "drink" ? o.felt.thirst : o.felt.hunger;
-    if (relief === "eased") e.good += 1;
-    else if (relief === "a little eased" || relief === "barely") e.good += 0.3;
-    else if (relief === "worse") e.bad += 1.5;
-    else e.bad += 0.6; // failed attempt
-    this.experience.set(key, e);
-    if (a.kind === "eat" && o.success) {
-      this.recentMeals.push({ thing: a.target, tick: o.tick });
-      if (this.recentMeals.length > 8) this.recentMeals.shift();
+    if (relief === "eased") learn("helps", true);
+    else if (relief === "a little eased" || relief === "barely") learn("helps", true, 0.3);
+    else learn("helps", false);
+    if (o.felt.thirst === "worse") learn("harms", true);
+
+    this.memory.remember({
+      tick: o.tick,
+      kind: a.kind === "drink" ? "drank" : "ate",
+      place: thing.place,
+      thing: a.target,
+      category,
+      salience: o.felt.thirst === "worse" ? 0.8 : 0.3,
+    });
+    if (a.kind === "eat") this.pendingMealChecks.push({ tick: o.tick, category });
+  }
+
+  /** Nausea came on: blame what was eaten in the last 4 hours (all of it, it cannot tell which). */
+  private blameRecentMeals(tick: number): void {
+    const meals = this.memory.recall("ate", tick - 240);
+    const blamed = new Set<string>();
+    for (const meal of meals) if (meal.category) blamed.add(meal.category);
+    for (const category of [...blamed].sort()) {
+      const thing = [...this.things.values()].find((t) => t.category === category);
+      const prior = thing ? eatPrior(thing.features) : undefined;
+      this.recordChange(this.beliefs.update(category, "eat", "harms", true, tick, 1, prior));
+    }
+    this.memory.remember({ tick, kind: "felt_sick", place: this.here, salience: 0.9 });
+    // Those meals are already judged; no "it was fine" evidence for them later.
+    for (let i = this.pendingMealChecks.length - 1; i >= 0; i--) {
+      if (blamed.has(this.pendingMealChecks[i]!.category)) this.pendingMealChecks.splice(i, 1);
     }
   }
 
-  /** Nausea came on: blame what was eaten in the last 4 hours. */
-  private blameRecentMeals(tick: number): void {
-    for (const meal of this.recentMeals) {
-      if (tick - meal.tick > 240) continue;
-      const e = this.experience.get(`eat:${meal.thing}`) ?? { good: 0, bad: 0 };
-      e.bad += 2;
-      this.experience.set(`eat:${meal.thing}`, e);
+  /** A meal 4 hours ago without nausea afterwards is weak evidence that it is harmless. */
+  private settleMealChecks(): void {
+    while (this.pendingMealChecks.length > 0 && this.now - this.pendingMealChecks[0]!.tick > 240) {
+      const { category } = this.pendingMealChecks.shift()!;
+      const thing = [...this.things.values()].find((t) => t.category === category);
+      const prior = thing ? eatPrior(thing.features) : undefined;
+      this.recordChange(this.beliefs.update(category, "eat", "harms", false, this.now, 0.5, prior));
     }
+  }
+
+  private recordChange(change: BeliefChange): void {
+    const { belief, before, after, formed } = change;
+    const crossed = Math.floor(before * 4) !== Math.floor(after * 4);
+    if (formed || crossed) {
+      this.emit(formed ? "belief.formed" : "belief.changed", {
+        category: belief.category,
+        action: belief.action,
+        effect: belief.effect,
+        confidence: Math.round(after * 100) / 100,
+      });
+    }
+  }
+
+  private emit(type: string, data: Record<string, unknown>): void {
+    this.events.push({ tick: this.now, type, data });
   }
 
   // --- way finding over the places it knows --------------------------------

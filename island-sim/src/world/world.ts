@@ -22,6 +22,8 @@ export interface WorldState {
   /** Accumulated health damage per cause, for death attribution. */
   damage: Record<DamageCause, number>;
   death: { tick: number; cause: DamageCause } | null;
+  /** Effects that set in later, e.g. sickness hours after eating something bad. Sorted by tick. */
+  delayedEffects: { tick: number; sickness: number }[];
 }
 
 /** Objective state of the character in the world (position, what it is doing). */
@@ -57,6 +59,7 @@ export function createWorld(rng: Rng): WorldState {
     character: { place: START_PLACE, current: null },
     damage: { thirst: 0, hunger: 0, cold: 0, sickness: 0, exhaustion: 0 },
     death: null,
+    delayedEffects: [],
   };
 }
 

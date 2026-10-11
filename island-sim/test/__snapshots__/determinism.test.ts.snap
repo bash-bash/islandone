@@ -2,8 +2,8 @@
 
 exports[`determinism (Handoff §36: same seed, same result) > matches the golden fingerprints 1`] = `
 [
-  "98b3cc4aa4bea0de",
-  "a2e2330f785dff69",
-  "7668e52bb027abef",
+  "20afdb8951a26fa0",
+  "de81ee4a28140f5a",
+  "62fdfa5ba0949011",
 ]
 `;

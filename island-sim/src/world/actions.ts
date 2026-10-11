@@ -31,6 +31,8 @@ interface Consumption {
   thirst?: number;
   hunger?: number;
   sickness?: number;
+  /** Minutes until the sickness sets in (digestion). */
+  sicknessDelay?: number;
   health?: number;
   active: boolean;
 }
@@ -42,7 +44,7 @@ const DRINK: Partial<Record<ThingKind, Consumption>> = {
 
 const EAT: Partial<Record<ThingKind, Consumption>> = {
   fruit_bush: { minutes: 10, chance: 1, consumes: true, hunger: -22, thirst: -3, active: false },
-  red_berry_bush: { minutes: 10, chance: 1, consumes: true, hunger: -4, sickness: 45, active: false },
+  red_berry_bush: { minutes: 10, chance: 1, consumes: true, hunger: -4, sickness: 45, sicknessDelay: 90, active: false },
   // Hard shell: bare hands almost never open it (problem chain "food", plan §3).
   coconut_palm: { minutes: 30, chance: 0.03, failReason: "too_hard", consumes: true, hunger: -25, thirst: -15, active: true },
   shellfish: { minutes: 20, chance: 0.7, failReason: "stuck", consumes: true, hunger: -12, active: true },
@@ -77,7 +79,7 @@ export function isActive(world: WorldState, action: Action): boolean {
   return false;
 }
 
-export function completeAction(world: WorldState, action: Action, rng: Rng): ActionResult {
+export function completeAction(world: WorldState, action: Action, rng: Rng, tick: number): ActionResult {
   const body = world.body;
   switch (action.kind) {
     case "idle":
@@ -100,7 +102,11 @@ export function completeAction(world: WorldState, action: Action, rng: Rng): Act
       if (spec.consumes) thing.amount -= 1;
       body.thirst = clamp(body.thirst + (spec.thirst ?? 0));
       body.hunger = clamp(body.hunger + (spec.hunger ?? 0));
-      body.sickness = clamp(body.sickness + (spec.sickness ?? 0));
+      if (spec.sickness && spec.sicknessDelay) {
+        world.delayedEffects.push({ tick: tick + spec.sicknessDelay, sickness: spec.sickness });
+      } else {
+        body.sickness = clamp(body.sickness + (spec.sickness ?? 0));
+      }
       body.health = clamp(body.health + (spec.health ?? 0));
       return {
         success: true,

@@ -48,9 +48,18 @@ export type Action =
   | { kind: "drink"; target: string; purpose: Purpose }
   | { kind: "eat"; target: string; purpose: Purpose };
 
+/** Something that happened inside the mind (a belief formed, learning used). Logged for analytics only. */
+export interface MindEvent {
+  tick: number;
+  type: string;
+  data?: Record<string, unknown>;
+}
+
 export interface Mind {
   /** Receives everything perceived since the last call. */
   observe(observations: readonly Observation[]): void;
   /** Called whenever the character is free to act. */
   decide(tick: number): Action;
+  /** Returns and clears what happened inside the mind since the last call. */
+  drainEvents?(): MindEvent[];
 }

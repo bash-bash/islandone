@@ -67,6 +67,11 @@ export const bodySystem: WorldSystem = {
   tick(ctx) {
     const { world, tick, log } = ctx;
     if (world.death) return;
+    while (world.delayedEffects.length > 0 && world.delayedEffects[0]!.tick <= tick) {
+      const effect = world.delayedEffects.shift()!;
+      world.body.sickness = Math.min(100, world.body.sickness + effect.sickness);
+      log.push({ tick, source: "body", type: "sickness.onset", data: { sickness: effect.sickness } });
+    }
     const place = world.places.get(world.character.place)!;
     const current = world.character.current;
     const hour = timeOf(tick).hour;

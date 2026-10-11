@@ -102,7 +102,7 @@ Ausgabe pro Seed als JSON, dazu eine Zusammenfassung über alle Seeds (Mittelwer
 
 1. ✅ **Gerüst:** `island-sim/` mit CLI (`npm run sim -- --seeds 100 --days 30`), PRNG, Tick-Schleife, Ereignisprotokoll, Determinismus-Test.
 2. ✅ **Körper und Welt:** Orte, Ressourcen, Bedürfnisse (Hunger, Durst, Energie, Temperatur, Gesundheit), einfache Routineaktionen, Wetter. Ziel: Figur überlebt oder stirbt nachvollziehbar.
-3. **Wahrnehmung und Wissen:** `perceive()`, Beobachtungen, Überzeugungen mit Konfidenz, Erinnerungen, Architektur-Test für die Erkenntnisschranke.
+3. ✅ **Wahrnehmung und Wissen:** `perceive()`, Beobachtungen, Überzeugungen mit Konfidenz, Erinnerungen, Architektur-Test für die Erkenntnisschranke.
 4. **Probleme, Hypothesen, Experimente:** Hypothesen-Generator, Experimente mit von der Welt berechneten Ergebnissen, einfache Teile-und-Verbindungen-Konstruktionen (§13).
 5. **Fatigue, Gaps, Satisficing, Lernereignisse.**
 6. **Auswertung:** alle Kennzahlen, Lauf über 100 Seeds, Bericht. Abnahme nach §36 plus Vielfalt: die Seeds müssen bei Strategiewechseln und Entdeckungszeitpunkten messbar streuen.

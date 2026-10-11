@@ -28,10 +28,22 @@ export interface RunMetrics {
   redBerryMeals: number;
   foodAttempts: number;
   foodSuccesses: number;
+  /** Categories of things the character distinguished by look. */
+  categoriesDiscovered: number;
+  /** Beliefs (category × action × effect) with at least one piece of evidence. */
+  beliefsFormed: number;
+  /**
+   * Learning events (plan §8): distinct pieces of learning that changed at least
+   * one later decision, counted as distinct (need, chosen category, category
+   * instinct would have chosen) combinations.
+   */
+  learningEvents: number;
+  /** Decisions that came out differently than instinct alone would have chosen. */
+  decisionsShapedByLearning: number;
   weatherDays: Record<WeatherKind, number>;
 }
 
-export const PENDING_METRICS = ["hypotheses", "capabilityGaps", "strategyChanges", "learningEvents"] as const;
+export const PENDING_METRICS = ["hypotheses", "capabilityGaps", "strategyChanges"] as const;
 
 const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle"] as const;
 
@@ -43,10 +55,20 @@ export function computeMetrics(result: SimResult): RunMetrics {
   let redBerryMeals = 0;
   let foodAttempts = 0;
   let foodSuccesses = 0;
+  let categoriesDiscovered = 0;
+  let beliefsFormed = 0;
+  let decisionsShapedByLearning = 0;
+  const learning = new Set<string>();
 
   for (const e of result.log.all()) {
     const d = e.data ?? {};
     if (e.type === "weather.day") weatherDays[d.weather as WeatherKind]++;
+    if (e.type === "category.discovered") categoriesDiscovered++;
+    if (e.type === "belief.formed") beliefsFormed++;
+    if (e.type === "learning.applied") {
+      decisionsShapedByLearning++;
+      learning.add(`${d.use}|${d.chosen}|${d.instead}`);
+    }
     if (e.type !== "action.end") continue;
     if (d.kind === "move" && d.success) visited.add(d.place as string);
     if (d.kind === "drink" && d.success) {
@@ -84,6 +106,10 @@ export function computeMetrics(result: SimResult): RunMetrics {
     redBerryMeals,
     foodAttempts,
     foodSuccesses,
+    categoriesDiscovered,
+    beliefsFormed,
+    learningEvents: learning.size,
+    decisionsShapedByLearning,
     weatherDays,
   };
 }

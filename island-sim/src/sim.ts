@@ -74,7 +74,7 @@ export function runSimulation(options: SimOptions): SimResult {
 
     const current = world.character.current;
     if (current && (current.endsAt !== null ? tick >= current.endsAt : shouldWake(world, hour))) {
-      const result = completeAction(world, current.action, rng.get("world"));
+      const result = completeAction(world, current.action, rng.get("world"), tick);
       world.body.asleep = false;
       world.character.current = null;
       arrived = current.action.kind === "move" && result.success;
@@ -89,6 +89,7 @@ export function runSimulation(options: SimOptions): SimResult {
 
     mind.observe(perception.perceive(world, tick, hour, arrived));
     arrived = false;
+    logMindEvents(mind, log);
 
     if (!world.character.current) {
       const action = mind.decide(tick);
@@ -96,6 +97,7 @@ export function runSimulation(options: SimOptions): SimResult {
       world.character.current = { action, startedAt: tick, endsAt: minutes === null ? null : tick + minutes };
       if (action.kind === "sleep") world.body.asleep = true;
       log.push({ tick, source: "mind", type: "action.start", data: describe(action) });
+      logMindEvents(mind, log);
     }
     const purpose: Purpose = world.character.current!.action.purpose;
     purposeTicks[purpose] = (purposeTicks[purpose] ?? 0) + 1;
@@ -124,6 +126,11 @@ function shouldWake(world: WorldState, hour: number): boolean {
   if (b.thirst > 85 || b.warmth < 30 || b.sickness > 60) return true;
   const cover = world.places.get(world.character.place)!.cover;
   return world.raining && cover < 0.3 && b.energy > 50;
+}
+
+function logMindEvents(mind: Mind, log: EventLog): void {
+  if (!mind.drainEvents) return;
+  for (const e of mind.drainEvents()) log.push({ tick: e.tick, source: "mind", type: e.type, data: e.data });
 }
 
 function describe(action: Action): Record<string, unknown> {
