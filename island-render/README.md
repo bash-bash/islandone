@@ -19,9 +19,11 @@ URL-Parameter:
 | `?renderer=webgl2` | WebGL 2 erzwingen (zum Vergleich mit WebGPU) |
 | `?cam=alpha,beta,radius,x,y,z` | feste Kameraposition, z. B. für Vergleichs-Screenshots |
 | `?post=0` | Nachbearbeitung (Farbkorrektur, Bloom) aus |
+| `?quality=low\|medium\|high` | Qualitätsprofil erzwingen (sonst die letzte Wahl im Einstellungsfeld, auf Touch-Geräten Mittel, sonst Hoch) |
+| `?bench` / `?bench=30` | Benchmark: eine langsame Runde ums Camp (20 s oder die angegebenen Sekunden), danach Ø FPS, 1 %-Low, p95-Frametime und Speicher im Einstellungsfeld und in der Konsole |
 | `?ao=1` | Ambient Occlusion (SSAO) an, nur zum Ausprobieren: dunkelt den Meeresboden durch das Wasser ab und kostet viel |
 
-Kamera: linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Die Figur steuert man nicht; sie handelt selbst (siehe Charakter). Das Zahnrad oben rechts (oder `?debug` in der URL) zeigt Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
+Kamera: linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Die Figur steuert man nicht; sie handelt selbst (siehe Charakter). Das Haus-Symbol oder `R` setzt die Ansicht zurück (Reset View). Ein Klick auf die Entdeckung unten links oder `F` fährt zum Ort des Ereignisses (Focus Event). Das Zahnrad oben rechts (oder `?debug` in der URL) zeigt Renderer, FPS, Draw Calls, Dreiecke, Speicher, Ladestand der Assets und die Wahl des Qualitätsprofils.
 
 Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`, `library`), z. B. für den Babylon-Inspector.
 
@@ -30,7 +32,9 @@ Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`
 | Bereich | Stand | Datei |
 |---|---|---|
 | Engine | WebGPU mit WebGL-2-Fallback | `src/engine/createEngine.ts` |
-| Kamera | Orbit, erhöht, Neigung und Zoom begrenzt | `src/engine/camera.ts` |
+| Kamera | Orbit, erhöht, Neigung und Zoom begrenzt; Startansicht wie im Referenzbild. Reset View und Focus Event gleiten in 1,2 s, jede Maus- oder Radbewegung bricht ab | `src/engine/camera.ts` |
+| Qualität | Profile Niedrig/Mittel/Hoch: Auflösung (Pixelverhältnis bis 1/1,5/2, Niedrig rendert mit 75 %), Schattenkarte 1024/2048/2048 mit weichem Filter nur auf Hoch, MSAA 1/2/4, Bloom und Schärfe, Kaustiken (aus auf Niedrig), LOD-Distanzen 60/80/100 % | `src/engine/quality.ts` |
+| Messung | FPS, JS-Heap (nur Chromium) und geschätzter GPU-Speicher (Texturen, Render-Targets, Geometrie) im Einstellungsfeld; Benchmark mit `?bench` | `src/engine/measure.ts` |
 | Himmel und Licht | Verlaufs-Himmelskuppel mit ziehenden Wolken über dem Horizont, kräftige Sonne (etwa 40° hoch, längere Schatten und weiches Relief) mit weichen Schatten, Himmels-Fülllicht, leichter Dunst | `src/world/sky.ts` |
 | Bildstimmung | Nachbearbeitung: neutrales Tonemapping (KHR PBR Neutral, hält Farben satt), Sättigung, kühle Schatten, leichter Bloom, Schärfe, Vignette | `src/engine/look.ts` |
 | Terrain | `IO_Terrain_Beach_Test_30m`, `IO_Seafloor_Test_30m` und ein grober Rand bis zum Horizont aus Blender (`assets/terrain`, `islandone_terrain.py`), dazu ein Höhenraster für Platzierung, Wassertiefe und Klicks. Sand in warmem Pfirsichton mit Flecken, kleinen Buckeln und Fußspuren in der Textur | `src/world/terrain.ts` |
@@ -66,7 +70,7 @@ npm run build && npx vite preview --port 4173 &
 node scripts/screenshot.mjs "http://localhost:4173/?renderer=webgl2" shot.png
 ```
 
-Läuft über SwiftShader (Software-Rendering), die FPS im HUD sind dort bedeutungslos. Echte Messungen nur im normalen Browser.
+Läuft über SwiftShader (Software-Rendering), die FPS im HUD sind dort bedeutungslos. Echte Messungen nur im normalen Browser, z. B. `?bench&quality=high` und dann `?bench&quality=low`.
 
 ## Nächste Schritte
 
@@ -75,4 +79,4 @@ Läuft über SwiftShader (Software-Rendering), die FPS im HUD sind dort bedeutun
 3. Wind auch in den Schatten; Wind-Gewichte aus den GLBs (`TEXCOORD_1`) nutzen statt der Höhe, sobald die Palmen sie auch haben.
 4. Kisten, Topf und weitere fehlende Requisiten aus der Asset-Liste.
 5. Licht: HDR-Umgebung statt Verlaufskuppel, Ambient Occlusion ohne Fehler am Wasser.
-6. Performance-Profile LOW/MEDIUM/HIGH (Handoff §24), KTX2-Texturen, Bundle aufteilen.
+6. KTX2-Texturen: Die Texturen belegen unkomprimiert rund 540–650 MB GPU-Speicher (Palmen allein 15 × 1024×2048, Figur 3 × 2048²). Mit KTX2/Basis wären es etwa ein Viertel. Bundle aufteilen.

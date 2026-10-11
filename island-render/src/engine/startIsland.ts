@@ -11,19 +11,24 @@ import { createContactShadows } from "../world/contactShadows";
 import { createSkyAndLight, HORIZON, ZENITH } from "../world/sky";
 import { windState } from "../world/wind";
 import { WATER_LEVEL, loadTerrain, terrainHeight } from "../world/terrain";
-import { createOrbitCamera } from "./camera";
+import { cameraRigRef, createCameraRig, createOrbitCamera } from "./camera";
 import { createEngine } from "./createEngine";
 import { setupLook } from "./look";
+import { measureMemory, runBenchmark } from "./measure";
+import { hardwareScaling, pickQuality } from "./quality";
 import { statsStore } from "./stats";
 
 export async function startIsland(canvas: HTMLCanvasElement) {
   const { engine, renderer } = await createEngine(canvas);
-  statsStore.set({ renderer });
+  const quality = pickQuality();
+  engine.setHardwareScalingLevel(hardwareScaling(quality));
+  statsStore.set({ renderer, quality: quality.level });
 
   const scene = new Scene(engine);
   scene.skipPointerMovePicking = true;
 
-  const camera = createOrbitCamera(scene, canvas, new Vector3(-0.8, 0.5, -1.8));
+  const camera = createOrbitCamera(scene, canvas);
+  cameraRigRef.current = createCameraRig(camera, canvas);
   // ?cam=alpha,beta,radius,x,y,z reproduces a view, e.g. for comparing screenshots.
   const cam = new URLSearchParams(location.search).get("cam")?.split(",").map(Number);
   if (cam?.length === 6 && cam.every(Number.isFinite)) {
@@ -31,10 +36,11 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     [camera.alpha, camera.beta, camera.radius] = cam;
     camera.upperBetaLimit = Math.max(camera.upperBetaLimit ?? 0, cam[1]);
   }
-  const { shadows, sun } = createSkyAndLight(scene);
-  setupLook(scene, camera);
+  const { shadows, sun } = createSkyAndLight(scene, quality.shadowMapSize, quality.shadowFilter);
+  setupLook(scene, camera, quality);
   const terrain = await loadTerrain(scene);
   const caustics = createCaustics(scene, terrain);
+  if (!quality.caustics) for (const m of caustics.meshes) m.setEnabled(false);
   const water = createWater(scene, {
     camera,
     sunDirection: sun.direction,
@@ -47,17 +53,19 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   let collision: CollisionWorld | null = null;
 
   const library = new AssetLibrary(scene, shadows);
+  library.lodScale = quality.lodScale;
   library.onProgress = (s) => statsStore.set({ assetsLoaded: s.loaded, assetsTotal: s.total });
 
   const instrumentation = new SceneInstrumentation(scene);
   instrumentation.captureFrameTime = false;
   let statTimer = 0;
+  let memoryTimer = 0;
 
   const start = performance.now();
   scene.onBeforeRenderObservable.add(() => {
     const t = (performance.now() - start) / 1000;
     water.update(t);
-    caustics.update(t);
+    if (quality.caustics) caustics.update(t);
     windState.time = t;
     library.update(camera.position);
     const dt = Math.min(engine.getDeltaTime(), 100) / 1000;
@@ -71,6 +79,8 @@ export async function startIsland(canvas: HTMLCanvasElement) {
       drawCalls: instrumentation.drawCallsCounter.current,
       triangles: Math.round(scene.getActiveIndices() / 3),
     });
+    // Counting buffers walks the whole scene, so only every few seconds.
+    if ((memoryTimer += 1) % 6 === 0) statsStore.set({ memory: measureMemory(engine, scene) });
   });
 
   engine.runRenderLoop(() => scene.render());
@@ -120,12 +130,21 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     // Assigned in the load callback above, which TypeScript does not track.
     collision = buildCollisionWorld(scene, collisionExtras);
     (character as Character | null)?.setCollision(collision);
-    statsStore.set({ ready: true });
+    statsStore.set({ ready: true, memory: measureMemory(engine, scene) });
   } catch (err) {
     console.error(err);
     statsStore.set({ error: String(err) });
   }
 
   // Handy in the browser console while tuning: window.islandone.scene.debugLayer …
-  Object.assign(window, { islandone: { engine, scene, camera, library, character, collision } });
+  Object.assign(window, { islandone: { engine, scene, camera, library, character, collision, quality } });
+
+  const bench = new URLSearchParams(location.search).get("bench");
+  if (bench !== null && statsStore.get().ready) {
+    statsStore.set({ bench: "running" });
+    await new Promise((r) => setTimeout(r, 2000)); // let shaders compile and the first frames settle
+    const result = await runBenchmark(engine, scene, camera, Number(bench) || 20);
+    console.log("IslandOne benchmark", JSON.stringify({ renderer, quality: quality.level, ...result }));
+    statsStore.set({ bench: result });
+  }
 }

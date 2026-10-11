@@ -103,6 +103,8 @@ export class AssetLibrary {
   private lodEntries: LodEntry[] = [];
   private frame = 0;
   readonly stats: LibraryStats = { loaded: 0, total: 0 };
+  /** Quality profile factor on all LOD switch distances. */
+  lodScale = 1;
   onProgress?: (stats: LibraryStats) => void;
 
   constructor(
@@ -221,7 +223,7 @@ export class AssetLibrary {
   update(cameraPosition: Vector3) {
     if (this.frame++ % 10 !== 0) return;
     for (const e of this.lodEntries) {
-      const d = Vector3.Distance(cameraPosition, e.center);
+      const d = Vector3.Distance(cameraPosition, e.center) / this.lodScale;
       const level = e.maxDistance.findIndex((max) => d <= max); // -1 = beyond the last level: culled
       if (level === e.current) continue;
       e.levels.forEach((n, i) => n.setEnabled(i === level));

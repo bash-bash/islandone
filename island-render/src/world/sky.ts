@@ -29,7 +29,7 @@ export interface SkyAndLight {
  * Daytime only (handoff §21): gradient sky dome, one sun with soft shadows,
  * hemispheric fill light, light haze towards the horizon.
  */
-export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLight {
+export function createSkyAndLight(scene: Scene, shadowMapSize = 2048, shadowFilter = ShadowGenerator.QUALITY_MEDIUM): SkyAndLight {
   scene.clearColor = new Color4(HORIZON.r, HORIZON.g, HORIZON.b, 1);
   scene.ambientColor = new Color3(0.25, 0.25, 0.25);
   scene.fogMode = Scene.FOGMODE_EXP2;
@@ -74,7 +74,7 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
 
   const shadows = new ShadowGenerator(shadowMapSize, sun);
   shadows.usePercentageCloserFiltering = true;
-  shadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
+  shadows.filteringQuality = shadowFilter;
   shadows.bias = 0.0015;
   shadows.normalBias = 0.02;
   shadows.darkness = 0.3;

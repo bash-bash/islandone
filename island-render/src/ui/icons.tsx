@@ -141,6 +141,14 @@ export function GearIcon({ size = 22 }: P) {
   );
 }
 
+export function HomeIcon({ size = 22 }: P) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden fill="#fff">
+      <path d="M12 2.8 1.8 11.6l1.4 1.6 1.6-1.4V21h5.4v-6h3.6v6h5.4v-8.2l1.6 1.4 1.4-1.6z" />
+    </svg>
+  );
+}
+
 export function CheckBox({ checked }: { checked: boolean }) {
   return (
     <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden>

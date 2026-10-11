@@ -297,3 +297,35 @@ body {
     height: 30px;
   }
 }
+
+.hud-discovery {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.hud-quality {
+  display: flex;
+  gap: 4px;
+}
+
+.hud-quality button {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.hud-quality button.active {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1b2635;
+  font-weight: 800;
+}
+
+.hud-bench b {
+  font-size: 12px;
+}

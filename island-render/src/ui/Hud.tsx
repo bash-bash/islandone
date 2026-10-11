@@ -1,5 +1,7 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import { statsStore } from "../engine/stats";
+import { cameraRigRef } from "../engine/camera";
+import { switchQuality, type QualityLevel } from "../engine/quality";
+import { statsStore, type RenderStats } from "../engine/stats";
 import { figureStore, startFigureStub, type Need, type Slot } from "./figureState";
 import {
   AxeIcon,
@@ -9,6 +11,7 @@ import {
   FoodIcon,
   GearIcon,
   HeartIcon,
+  HomeIcon,
   LeafIcon,
   LogIcon,
   PlankIcon,
@@ -39,10 +42,18 @@ const SLOT_ICON: Record<Slot["item"], ReactNode> = {
   stone: <StoneIcon size={44} />,
 };
 
+const QUALITY_LABEL: Record<QualityLevel, string> = { low: "Niedrig", medium: "Mittel", high: "Hoch" };
+
 const clock = (minuteOfDay: number) => {
   const m = Math.floor(minuteOfDay);
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 };
+
+function memoryText(m: RenderStats["memory"]) {
+  if (!m) return "…";
+  const gpu = `GPU ~${m.gpuMB} MB`;
+  return m.jsHeapMB !== undefined ? `JS ${m.jsHeapMB} MB · ${gpu}` : gpu;
+}
 
 export function Hud() {
   const s = useSyncExternalStore(statsStore.subscribe, statsStore.get);
@@ -51,6 +62,22 @@ export function Hud() {
   const loading = !s.ready && !s.error;
 
   useEffect(() => startFigureStub(), []);
+
+  const focusEvent = () => {
+    const at = figureStore.get().discovery?.at;
+    if (at) cameraRigRef.current?.focus(at.x, at.z, at.lift);
+  };
+
+  // R / Pos1: Reset View, F: Focus Event (the latest discovery).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "r" || e.key === "R" || e.key === "Home") cameraRigRef.current?.reset();
+      else if (e.key === "f" || e.key === "F") focusEvent();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <>
@@ -84,6 +111,9 @@ export function Hud() {
             <LeafIcon /> {f.resources.fiber}
           </span>
         </div>
+        <button className="hud-panel hud-gear" onClick={() => cameraRigRef.current?.reset()} aria-label="Ansicht zurücksetzen" title="Ansicht zurücksetzen (R)">
+          <HomeIcon />
+        </button>
         <button className="hud-panel hud-gear" onClick={() => setSettings((v) => !v)} aria-label="Einstellungen">
           <GearIcon />
         </button>
@@ -103,7 +133,7 @@ export function Hud() {
       </div>
 
       {f.discovery && (
-        <div className="hud-panel hud-discovery">
+        <div className="hud-panel hud-discovery" onClick={focusEvent} role="button" title="Hinsehen (F)">
           <img src={import.meta.env.BASE_URL + "ui/discovery_seagull.png"} alt="" />
           <div>
             <div className="hud-discovery-title">{f.discovery.title}</div>
@@ -146,7 +176,33 @@ export function Hud() {
             {s.assetsLoaded}/{s.assetsTotal}
           </b>
         </div>
-        <div className="hud-help">Linke Maustaste: drehen · Rechte: verschieben · Mausrad: zoomen</div>
+        <div className="hud-row">
+          <span>Speicher</span>
+          <b>{memoryText(s.memory)}</b>
+        </div>
+        <div className="hud-row">
+          <span>Qualität</span>
+          <span className="hud-quality">
+            {(["low", "medium", "high"] as const).map((q) => (
+              <button key={q} className={q === s.quality ? "active" : ""} onClick={() => q !== s.quality && switchQuality(q)}>
+                {QUALITY_LABEL[q]}
+              </button>
+            ))}
+          </span>
+        </div>
+        {s.bench && (
+          <div className="hud-row hud-bench">
+            <span>Benchmark</span>
+            <b>
+              {s.bench === "running"
+                ? "läuft …"
+                : `Ø ${s.bench.avgFps} FPS · 1 % ${s.bench.low1Fps} · p95 ${s.bench.p95FrameMs} ms`}
+            </b>
+          </div>
+        )}
+        <div className="hud-help">
+          Linke Maustaste: drehen · Rechte: verschieben · Mausrad: zoomen · R: Ansicht zurück · F: zum Ereignis
+        </div>
       </div>
 
       {loading && <div className="hud-panel hud-loading">Lade Assets … {s.assetsLoaded}/{s.assetsTotal}</div>}

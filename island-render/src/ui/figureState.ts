@@ -26,7 +26,8 @@ export interface FigureState {
   resources: { wood: number; stone: number; fiber: number };
   goalsTitle: string;
   goals: Goal[];
-  discovery?: { title: string; text: string };
+  /** Latest event; `at` is where it happened, for the camera's Focus Event. */
+  discovery?: { title: string; text: string; at?: { x: number; z: number; lift: number } };
   belt: Slot[];
   selectedSlot: number;
 }
@@ -47,7 +48,11 @@ let state: FigureState = {
     { label: "Lagerfeuer bauen", done: 0, of: 1 },
     { label: "Kleine Hütte bauen", done: 0, of: 1 },
   ],
-  discovery: { title: "Neue Entdeckung!", text: "Möwen zeigen oft ressourcenreiche Orte in der Nähe." },
+  discovery: {
+    title: "Neue Entdeckung!",
+    text: "Möwen zeigen oft ressourcenreiche Orte in der Nähe.",
+    at: { x: 7.2, z: 12.5, lift: 2.4 }, // the seagull on the big rock
+  },
   belt: [
     { item: "axe" },
     { item: "torch" },

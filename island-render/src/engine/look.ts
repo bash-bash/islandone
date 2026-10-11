@@ -6,6 +6,7 @@ import {
   type Camera,
   type Scene,
 } from "@babylonjs/core";
+import type { QualityProfile } from "./quality";
 
 /**
  * Post-processing for the bright, saturated look of the reference image (handoff §22):
@@ -13,13 +14,14 @@ import {
  * subtle bloom on sunlit highlights and screen-space ambient occlusion for
  * contact shadows. AO is opt-in with `?ao=1` (it darkens the seafloor through the
  * transparent water and costs a lot on mobile), `?post=0` everything.
+ * The quality profile decides MSAA, bloom and sharpening.
  */
-export function setupLook(scene: Scene, camera: Camera) {
+export function setupLook(scene: Scene, camera: Camera, quality: QualityProfile) {
   const params = new URLSearchParams(location.search);
   if (params.get("post") === "0") return;
 
   const pipeline = new DefaultRenderingPipeline("look", true, scene, [camera]);
-  pipeline.samples = 4;
+  pipeline.samples = quality.msaaSamples;
   pipeline.fxaaEnabled = false;
 
   pipeline.imageProcessingEnabled = true;
@@ -41,13 +43,13 @@ export function setupLook(scene: Scene, camera: Camera) {
   ip.colorCurvesEnabled = true;
   ip.colorCurves = curves;
 
-  pipeline.bloomEnabled = true;
+  pipeline.bloomEnabled = quality.bloom;
   pipeline.bloomThreshold = 0.9;
   pipeline.bloomWeight = 0.2;
   pipeline.bloomKernel = 48;
   pipeline.bloomScale = 0.5;
 
-  pipeline.sharpenEnabled = true;
+  pipeline.sharpenEnabled = quality.sharpen;
   pipeline.sharpen.edgeAmount = 0.25;
 
   if (params.get("ao") === "1" && SSAO2RenderingPipeline.IsSupported) {
