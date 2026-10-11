@@ -1,4 +1,6 @@
 // Tiny store the Babylon side writes and the React HUD reads.
+import type { BenchResult, MemoryStats } from "./measure";
+import type { QualityLevel } from "./quality";
 
 export interface RenderStats {
   renderer: string;
@@ -8,6 +10,10 @@ export interface RenderStats {
   assetsLoaded: number;
   assetsTotal: number;
   ready: boolean;
+  quality: QualityLevel;
+  memory?: MemoryStats;
+  /** Running: "running"; done: the result. */
+  bench?: "running" | BenchResult;
   error?: string;
 }
 
@@ -19,6 +25,7 @@ let state: RenderStats = {
   assetsLoaded: 0,
   assetsTotal: 0,
   ready: false,
+  quality: "high",
 };
 const listeners = new Set<() => void>();
 

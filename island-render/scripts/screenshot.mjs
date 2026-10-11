@@ -20,10 +20,16 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 page.on("pageerror", (e) => console.error("[pageerror]", e.message));
-page.on("console", (m) => m.type() === "error" && console.error("[console]", m.text()));
+page.on("console", (m) => {
+  if (m.type() === "error") console.error("[console]", m.text());
+  else if (m.text().startsWith("IslandOne benchmark")) console.log(m.text());
+});
 await page.goto(url);
 await page.waitForFunction(() => !document.querySelector(".hud-loading"), null, { timeout: 180_000 });
 await page.waitForTimeout(5000);
-await page.screenshot({ path: out });
-console.log((await page.locator(".hud-stats").innerText()).replace(/\n/g, " "));
+// ?bench: wait for the benchmark turn to finish (slow under SwiftShader).
+if (new URL(url).searchParams.has("bench"))
+  await page.waitForFunction(() => /FPS ·/.test(document.querySelector(".hud-bench")?.textContent ?? ""), null, { timeout: 600_000 });
+await page.screenshot({ path: out, timeout: 180_000 }); // software WebGPU can take a while per frame
+console.log(((await page.locator(".hud-stats").textContent()) ?? "").replace(/\s+/g, " ")); // hidden unless ?debug
 await browser.close();

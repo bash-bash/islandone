@@ -1,96 +1,78 @@
-import { Color3, MeshBuilder, PBRMaterial, VertexBuffer, VertexData, type Mesh, type Scene } from "@babylonjs/core";
-import { fbm } from "./noise";
-import { createSandDetailTexture } from "./textures";
+import { LoadAssetContainerAsync, type AbstractMesh, type Scene } from "@babylonjs/core";
+import "@babylonjs/loaders/glTF";
 
 /**
- * Procedural stand-in for IO_Terrain_Beach_Test_30m / IO_Seafloor_Test_30m until the
- * Blender terrain exists. Land is -X, the sea is +X, water level is y = 0.
+ * Beach test ground from Blender (assets/terrain, islandone_terrain.py):
+ * IO_Terrain_Beach_Test_30m, IO_Seafloor_Test_30m and a low-detail surround,
+ * plus a float32 height grid for placement and water depth.
+ * Land is -X, the sea is +X, water level is y = 0.
  */
-export const TERRAIN_SIZE = 90;
 export const WATER_LEVEL = 0;
 
-/** Seaward distance (m) from the beach crest, which wiggles along Z. */
-function shoreDistance(x: number, z: number): number {
-  const crestX = 3 + 1.6 * Math.sin(z * 0.22) + 0.8 * Math.sin(z * 0.07 + 1);
-  return x - crestX;
+const BASE = import.meta.env.BASE_URL + "assets/terrain/";
+const PIECES = ["IO_Terrain_Beach_Test_30m", "IO_Seafloor_Test_30m", "IO_Terrain_Surround_Test"];
+
+interface HeightGrid {
+  data: Float32Array;
+  originX: number;
+  originZ: number;
+  step: number;
+  columns: number;
+  rows: number;
 }
 
-/** Ground height at a world position. Placement and water depth both use this. */
+let grid: HeightGrid | null = null;
+
+/** Ground height at a world position (bilinear on the exported height grid, clamped at its edges). */
 export function terrainHeight(x: number, z: number): number {
-  const d = shoreDistance(x, z);
-  let h: number;
-  if (d <= 0) {
-    // Beach rising gently inland, then a steeper jungle bank.
-    const inland = -d;
-    h = 0.25 + Math.min(inland, 12) * 0.05 + Math.max(0, inland - 12) * 0.14;
-    h += (fbm(x * 0.08, z * 0.08, 3, 11) - 0.5) * Math.min(1, inland / 6) * 0.9;
-  } else {
-    // Shallow shelf (sand visible through the water), then deeper sea floor.
-    h = 0.25 - Math.min(d, 9) * 0.17 - Math.max(0, d - 9) * 0.09;
-    h = Math.max(h, -5);
-    h += (fbm(x * 0.15, z * 0.15, 3, 21) - 0.5) * 0.25;
-  }
-  // Small dunes everywhere.
-  h += (fbm(x * 0.35, z * 0.35, 2, 5) - 0.5) * 0.08;
-  return h;
+  if (!grid) throw new Error("terrainHeight() called before loadTerrain()");
+  const { data, originX, originZ, step, columns, rows } = grid;
+  const fx = Math.min(Math.max((x - originX) / step, 0), columns - 1.001);
+  const fz = Math.min(Math.max((z - originZ) / step, 0), rows - 1.001);
+  const ix = Math.floor(fx);
+  const iz = Math.floor(fz);
+  const tx = fx - ix;
+  const tz = fz - iz;
+  const i = iz * columns + ix;
+  const a = data[i] + (data[i + 1] - data[i]) * tx;
+  const b = data[i + columns] + (data[i + columns + 1] - data[i + columns]) * tx;
+  return a + (b - a) * tz;
 }
 
 export function waterDepth(x: number, z: number): number {
-  if (Math.abs(x) > TERRAIN_SIZE / 2 || Math.abs(z) > TERRAIN_SIZE / 2) return 6;
-  return WATER_LEVEL - terrainHeight(x, z);
+  if (!grid) throw new Error("waterDepth() called before loadTerrain()");
+  const { originX, originZ, step, columns, rows } = grid;
+  const outside = x < originX || z < originZ || x > originX + (columns - 1) * step || z > originZ + (rows - 1) * step;
+  return outside ? 6 : WATER_LEVEL - terrainHeight(x, z);
 }
 
-const DRY_SAND = new Color3(0.98, 0.8, 0.52);
-const WET_SAND = new Color3(0.72, 0.54, 0.34);
-const SEABED = new Color3(0.9, 0.76, 0.5);
-const JUNGLE_FLOOR = new Color3(0.42, 0.44, 0.2);
+export async function loadTerrain(scene: Scene): Promise<AbstractMesh[]> {
+  const manifest = await fetch(BASE + "terrain.json").then((r) => r.json());
+  const h = manifest.heights;
+  const [bin, ...containers] = await Promise.all([
+    fetch(BASE + h.file).then((r) => r.arrayBuffer()),
+    ...PIECES.map((name) => LoadAssetContainerAsync(BASE + name + ".glb", scene)),
+  ]);
+  grid = {
+    data: new Float32Array(bin),
+    originX: h.origin_xz[0],
+    originZ: h.origin_xz[1],
+    step: h.step_m,
+    columns: h.columns,
+    rows: h.rows,
+  };
+  if (grid.data.length !== grid.columns * grid.rows) throw new Error("terrain height grid size mismatch");
 
-export function createTerrain(scene: Scene): Mesh {
-  const ground = MeshBuilder.CreateGround(
-    "IO_Terrain_Beach_Test",
-    { width: TERRAIN_SIZE, height: TERRAIN_SIZE, subdivisions: 180, updatable: true },
-    scene,
-  );
-
-  const positions = ground.getVerticesData(VertexBuffer.PositionKind)!;
-  const colors = new Float32Array((positions.length / 3) * 4);
-  const tmp = new Color3();
-  for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i];
-    const z = positions[i + 2];
-    const h = terrainHeight(x, z);
-    positions[i + 1] = h;
-
-    const inland = -shoreDistance(x, z);
-    if (h < -0.05) {
-      Color3.LerpToRef(WET_SAND, SEABED, Math.min(1, -h / 1.5), tmp);
-    } else if (h < 0.32) {
-      Color3.LerpToRef(WET_SAND, DRY_SAND, Math.max(0, (h - 0.05) / 0.27), tmp);
-    } else {
-      Color3.LerpToRef(DRY_SAND, JUNGLE_FLOOR, Math.min(1, Math.max(0, (inland - 9) / 6)), tmp);
+  const meshes: AbstractMesh[] = [];
+  for (const c of containers) {
+    c.addAllToScene();
+    for (const m of c.meshes) {
+      if (m.getTotalVertices() === 0) continue;
+      m.receiveShadows = true;
+      m.isPickable = true;
+      m.freezeWorldMatrix();
+      meshes.push(m);
     }
-    const c = (i / 3) * 4;
-    colors[c] = tmp.r;
-    colors[c + 1] = tmp.g;
-    colors[c + 2] = tmp.b;
-    colors[c + 3] = 1;
   }
-  ground.updateVerticesData(VertexBuffer.PositionKind, positions);
-  ground.setVerticesData(VertexBuffer.ColorKind, colors);
-  const normals: number[] = [];
-  VertexData.ComputeNormals(positions, ground.getIndices()!, normals);
-  ground.updateVerticesData(VertexBuffer.NormalKind, normals);
-
-  const mat = new PBRMaterial("IO_MAT_Sand", scene);
-  const detail = createSandDetailTexture(scene);
-  detail.uScale = TERRAIN_SIZE / 2.5;
-  detail.vScale = TERRAIN_SIZE / 2.5;
-  mat.albedoTexture = detail;
-  mat.metallic = 0;
-  mat.roughness = 0.95;
-  ground.material = mat;
-  ground.receiveShadows = true;
-  ground.isPickable = true;
-  ground.freezeWorldMatrix();
-  return ground;
+  return meshes;
 }

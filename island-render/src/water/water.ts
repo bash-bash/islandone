@@ -1,159 +1,173 @@
 import {
   Color3,
+  Color4,
+  Constants,
   Mesh,
-  PBRMaterial,
-  VertexBuffer,
+  RawTexture,
+  ShaderLanguage,
+  ShaderMaterial,
+  ShaderStore,
+  Texture,
+  Vector2,
+  Vector3,
+  Vector4,
   VertexData,
-  type BaseTexture,
+  type AbstractMesh,
+  type Camera,
   type Scene,
+  type BaseTexture,
 } from "@babylonjs/core";
-import { noise2 } from "../world/noise";
-import { createWaterNormalTexture } from "../world/textures";
-import { WATER_LEVEL, waterDepth } from "../world/terrain";
+import { createLaceTexture, createWaterNormalTexture } from "../world/textures";
+import { WATER_LEVEL } from "../world/terrain";
+import { GLSL_FRAGMENT, GLSL_VERTEX, WATER_SAMPLERS, WATER_UNIFORMS, WGSL_FRAGMENT, WGSL_VERTEX } from "./waterShader";
 
-// First water pass (handoff §19), kept engine-agnostic so it runs on WebGPU and WebGL 2:
-// - depth colour and transparency baked into vertex colours from the terrain height
-// - two normal maps scrolling in different directions (bump + clear-coat bump)
-// - Fresnel reflection of the sky capture
-// - shoreline foam band moving in and out, updated on the CPU for shallow vertices only
-// Refraction, caustics and a proper shader come with the water step later.
+// Water look (handoff §19, reference image "Tropisches Inselcamp am Strand"):
+// glass-clear turquoise water that shows the sand, rocks and caustics underneath,
+// deepening to teal-blue; lace foam along the shore and around rocks and posts;
+// small sun glints on the ripples. See waterShader.ts for how it is drawn.
+// Colours are linear (the post-process pipeline works in linear space).
 
-const SHALLOW = new Color3(0.36, 0.86, 0.82);
-const MID = new Color3(0.07, 0.6, 0.72);
-const DEEP = new Color3(0.03, 0.27, 0.45);
-const FOAM = new Color3(0.97, 0.99, 1.0);
+export const WATER_LOOK = {
+  shallowColor: new Color3(0.0, 0.33, 0.5), // in-scattered light in shallow water
+  deepColor: new Color3(0.0, 0.12, 0.22), // asymptotic colour of deep water
+  absorb: new Vector3(3.2, 0.9, 0.7), // per metre: red goes first, the water turns turquoise even when shallow
+  scatter: 0.55,
+  waveStrength: 0.55,
+};
 
-/** Grid axis coordinates: 0.5 m steps around the beach, coarser towards the horizon. */
-function axis(): number[] {
-  const out = [-500, -300, -180, -110, -75, -55];
-  for (let v = -45; v <= 45; v += 0.5) out.push(v);
-  out.push(55, 75, 110, 180, 300, 500);
-  return out;
+export interface WaterOptions {
+  camera: Camera;
+  sunDirection: Vector3;
+  sunColor: Color3;
+  zenith: Color3;
+  horizon: Color3;
 }
 
-function depthColor(depth: number, out: { r: number; g: number; b: number; a: number }) {
-  const d = Math.max(0, depth);
-  if (d < 1.2) {
-    const t = d / 1.2;
-    out.r = SHALLOW.r + (MID.r - SHALLOW.r) * t;
-    out.g = SHALLOW.g + (MID.g - SHALLOW.g) * t;
-    out.b = SHALLOW.b + (MID.b - SHALLOW.b) * t;
-  } else {
-    const t = Math.min(1, (d - 1.2) / 3.5);
-    out.r = MID.r + (DEEP.r - MID.r) * t;
-    out.g = MID.g + (DEEP.g - MID.g) * t;
-    out.b = MID.b + (DEEP.b - MID.b) * t;
-  }
-  // Shallow water is clear enough to show the sand, deep water is nearly opaque.
-  out.a = Math.min(0.92, 0.18 + d * 0.22);
+/** Grid axis: 1 m steps around the beach (the swash needs vertices), coarse towards the horizon. */
+function axis(): number[] {
+  const out = [-500, -300, -180, -110, -75, -55];
+  for (let v = -45; v <= 45; v += 1) out.push(v);
+  out.push(55, 75, 110, 180, 300, 500);
+  return out;
 }
 
 export interface Water {
   mesh: Mesh;
   update(timeSeconds: number): void;
+  setFoamField(field: { texture: BaseTexture; region: Vector4 }): void;
+  /** Meshes the water can see through to (sea floor, rocks, posts). Default: all opaque meshes. */
+  setDepthCasters(meshes: AbstractMesh[]): void;
 }
 
-export function createWater(scene: Scene, reflection: BaseTexture): Water {
+export function createWater(scene: Scene, o: WaterOptions): Water {
   const xs = axis();
   const n = xs.length;
   const positions = new Float32Array(n * n * 3);
-  const colors = new Float32Array(n * n * 4);
-  const uvs = new Float32Array(n * n * 2);
   const indices: number[] = [];
-  const baseColors = new Float32Array(n * n * 4);
-  const shoreVerts: number[] = [];
-  const shoreDepth: number[] = [];
-  const shorePhase: number[] = [];
-  const col = { r: 0, g: 0, b: 0, a: 0 };
-
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
-      const v = j * n + i;
-      const x = xs[i];
-      const z = xs[j];
-      positions.set([x, WATER_LEVEL, z], v * 3);
-      uvs.set([x / 12, z / 12], v * 2);
-      const depth = waterDepth(x, z);
-      depthColor(depth, col);
-      baseColors.set([col.r, col.g, col.b, col.a], v * 4);
-      if (depth > -0.25 && depth < 0.8) {
-        shoreVerts.push(v);
-        shoreDepth.push(depth);
-        shorePhase.push(noise2(x * 0.15, z * 0.15, 77) * 2.5 + z * 0.05);
-      }
+      positions.set([xs[i], WATER_LEVEL, xs[j]], (j * n + i) * 3);
       if (i < n - 1 && j < n - 1) {
+        const v = j * n + i;
         indices.push(v, v + n, v + 1, v + 1, v + n, v + n + 1);
       }
     }
   }
-  colors.set(baseColors);
-
   const mesh = new Mesh("water", scene);
   const vd = new VertexData();
   vd.positions = positions;
   vd.indices = indices;
-  vd.uvs = uvs;
-  vd.colors = colors;
-  const normals: number[] = [];
-  VertexData.ComputeNormals(positions, indices, normals);
-  vd.normals = normals;
-  vd.applyToMesh(mesh, true);
-  mesh.hasVertexAlpha = true;
+  vd.applyToMesh(mesh);
   mesh.isPickable = false;
-  mesh.alphaIndex = 10;
+  mesh.alwaysSelectAsActiveMesh = true; // the swash moves it a few cm above its bounds
 
-  const mat = new PBRMaterial("IO_MAT_Water", scene);
-  mat.albedoColor = Color3.White();
-  mat.metallic = 0;
-  mat.roughness = 0.08;
-  mat.reflectionTexture = reflection;
-  mat.environmentIntensity = 0.9;
-  mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
-  mat.backFaceCulling = false;
-  mat.forceDepthWrite = false;
+  // Scene depth behind the water, as camera-space z (half float is enough at this scale).
+  const depthRenderer = scene.enableDepthRenderer(o.camera, false, false, Texture.NEAREST_SAMPLINGMODE, true);
+  depthRenderer.clearColor = new Color4(1e4, 0, 0, 1);
+  const depthMap = depthRenderer.getDepthMap();
+
+  const webgpu = scene.getEngine().isWebGPU;
+  ShaderStore.ShadersStore["ioWaterVertexShader"] = GLSL_VERTEX;
+  ShaderStore.ShadersStore["ioWaterFragmentShader"] = GLSL_FRAGMENT;
+  ShaderStore.ShadersStoreWGSL["ioWaterVertexShader"] = WGSL_VERTEX;
+  ShaderStore.ShadersStoreWGSL["ioWaterFragmentShader"] = WGSL_FRAGMENT;
 
   const normalA = createWaterNormalTexture(scene, 1);
-  normalA.level = 0.45;
-  mat.bumpTexture = normalA;
-  mat.clearCoat.isEnabled = true;
-  mat.clearCoat.intensity = 0.6;
-  mat.clearCoat.roughness = 0.04;
   const normalB = createWaterNormalTexture(scene, 2);
-  normalB.uScale = 0.6;
-  normalB.vScale = 0.6;
-  mat.clearCoat.bumpTexture = normalB;
-  mesh.material = mat;
+  const lace = createLaceTexture(scene);
+  // Until the beach is built: no foam field (everything "far away").
+  let foamField: BaseTexture = RawTexture.CreateRGBATexture(new Uint8Array([255, 255, 0, 255]), 1, 1, scene);
+  let foamRegion = new Vector4(0, 0, 1, 1);
 
+  const makeMaterial = (name: string, tint: boolean) => {
+    const mat = new ShaderMaterial(
+      name,
+      scene,
+      { vertex: "ioWater", fragment: "ioWater" },
+      {
+        attributes: ["position"],
+        uniforms: WATER_UNIFORMS,
+        samplers: WATER_SAMPLERS,
+        defines: tint ? ["#define TINT"] : [],
+        needAlphaBlending: true,
+        shaderLanguage: webgpu ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
+      },
+    );
+    mat.alphaMode = tint ? Constants.ALPHA_MULTIPLY : Constants.ALPHA_ADD;
+    mat.backFaceCulling = false;
+    mat.disableDepthWrite = true;
+    mat.setTexture("depthTex", depthMap);
+    mat.setTexture("normalA", normalA);
+    mat.setTexture("normalB", normalB);
+    mat.setTexture("laceTex", lace);
+    return mat;
+  };
+  const tintMat = makeMaterial("IO_MAT_Water_Tint", true);
+  const lightMat = makeMaterial("IO_MAT_Water", false);
+
+  // Same geometry twice: multiply first, then add light.
+  const tintMesh = mesh.clone("waterTint");
+  tintMesh.material = tintMat;
+  tintMesh.alphaIndex = 9;
+  tintMesh.isPickable = false;
+  tintMesh.alwaysSelectAsActiveMesh = true;
+  mesh.material = lightMat;
+  mesh.alphaIndex = 10;
+  depthRenderer.getDepthMap().renderList = null; // all opaque meshes; transparent ones are skipped anyway
+
+  const toSun = o.sunDirection.negate().normalize();
+  const screen = new Vector2();
   return {
     mesh,
+    setDepthCasters(meshes) {
+      depthMap.renderList = meshes;
+    },
+    setFoamField(field) {
+      foamField = field.texture;
+      foamRegion = field.region;
+    },
     update(t: number) {
-      normalA.uOffset = t * 0.012;
-      normalA.vOffset = t * 0.007;
-      normalB.uOffset = -t * 0.006;
-      normalB.vOffset = t * 0.011;
-
-      // Wave front: swash runs from 0.7 m depth up onto the sand, breaks, fades, retreats.
-      for (let k = 0; k < shoreVerts.length; k++) {
-        const v = shoreVerts[k];
-        const cycle = (t * 0.16 + shorePhase[k]) % 1;
-        const front = 0.7 - cycle * 0.95;
-        const fade = cycle < 0.75 ? 1 : 1 - (cycle - 0.75) / 0.25;
-        const dist = shoreDepth[k] - front;
-        const band = Math.exp(-(dist * dist) / 0.006) * fade;
-        const trail = dist < 0 && dist > -0.3 ? (1 + dist / 0.3) * 0.35 * fade : 0;
-        const foam = Math.min(1, band + trail);
-
-        const o = v * 4;
-        const onSand = shoreDepth[k] < 0.02;
-        const baseA = onSand ? 0 : baseColors[o + 3];
-        colors[o] = baseColors[o] + (FOAM.r - baseColors[o]) * foam;
-        colors[o + 1] = baseColors[o + 1] + (FOAM.g - baseColors[o + 1]) * foam;
-        colors[o + 2] = baseColors[o + 2] + (FOAM.b - baseColors[o + 2]) * foam;
-        // Water creeps onto the sand behind the wave front.
-        const wet = onSand && shoreDepth[k] > front ? 0.35 * fade : 0;
-        colors[o + 3] = Math.min(1, Math.max(baseA, wet) + foam * 0.85);
+      const engine = scene.getEngine();
+      screen.set(engine.getRenderWidth(), engine.getRenderHeight());
+      const cam = scene.activeCamera ?? o.camera;
+      for (const mat of [tintMat, lightMat]) {
+        mat.setFloat("time", t);
+        mat.setVector3("camPos", cam.globalPosition);
+        mat.setVector2("screenSize", screen);
+        mat.setVector3("toSun", toSun);
+        mat.setColor3("sunColor", o.sunColor);
+        mat.setColor3("zenithColor", o.zenith);
+        mat.setColor3("horizonColor", o.horizon);
+        mat.setColor3("fogColor", scene.fogColor);
+        mat.setFloat("fogDensity", scene.fogMode === 0 ? 0 : scene.fogDensity);
+        mat.setColor3("shallowColor", WATER_LOOK.shallowColor);
+        mat.setColor3("deepColor", WATER_LOOK.deepColor);
+        mat.setVector3("absorb", WATER_LOOK.absorb);
+        mat.setFloat("scatter", WATER_LOOK.scatter);
+        mat.setFloat("waveStrength", WATER_LOOK.waveStrength);
+        mat.setVector4("foamRegion", foamRegion);
+        mat.setTexture("foamField", foamField);
       }
-      mesh.updateVerticesData(VertexBuffer.ColorKind, colors);
     },
   };
 }

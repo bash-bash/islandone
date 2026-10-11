@@ -1,4 +1,4 @@
-// Copies the runtime GLBs the beach test needs from the Blender asset folder
+// Copies the runtime GLBs (and terrain data) the beach test needs from the Blender asset folder
 // (layout: <family>/<file>.glb, as in the project's assets folder) into public/assets.
 //
 //   npm run sync-assets -- /path/to/IslandOne/assets
@@ -10,6 +10,7 @@ const FILES = [
   "bush/IO_Bush_Tropical_B.glb",
   "bush/IO_Bush_Tropical_C.glb",
   "campfire_stone/IO_Campfire_Stone_A.glb",
+  "character/IO_Character_A.glb",
   "fern/IO_Fern_A.glb",
   "fiber/IO_Fiber_Binding_A_Coil.glb",
   "grass/IO_Grass_Clump_A.glb",
@@ -28,6 +29,11 @@ const FILES = [
   "rock/glb/IO_Rock_Large_B.glb",
   "seagull/IO_Seagull_A.glb",
   "starfish/IO_Starfish_A.glb",
+  "terrain/IO_Terrain_Beach_Test_30m.glb",
+  "terrain/IO_Seafloor_Test_30m.glb",
+  "terrain/IO_Terrain_Surround_Test.glb",
+  "terrain/IO_Terrain_Beach_Test_heights.bin",
+  "terrain/terrain.json",
   "stone/IO_Stone_Small_A.glb",
   "workbench/IO_Workbench_A.glb",
 ];
