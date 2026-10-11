@@ -4,8 +4,8 @@ import {
   Scalar,
   TransformNode,
   Vector3,
+  type AbstractMesh,
   type AnimationGroup,
-  type Mesh,
   type Scene,
   type ShadowGenerator,
 } from "@babylonjs/core";
@@ -39,7 +39,7 @@ export interface Character {
 export async function createCharacter(
   scene: Scene,
   shadows: ShadowGenerator,
-  ground: Mesh,
+  isGround: (mesh: AbstractMesh) => boolean,
   start: Vector3,
 ): Promise<Character> {
   const container = await LoadAssetContainerAsync(URL, scene);
@@ -82,7 +82,7 @@ export async function createCharacter(
 
   scene.onPointerObservable.add((info) => {
     if (info.type !== PointerEventTypes.POINTERTAP || info.event.button !== 0) return;
-    const pick = scene.pick(scene.pointerX, scene.pointerY, (m) => m === ground);
+    const pick = scene.pick(scene.pointerX, scene.pointerY, isGround);
     if (pick?.hit && pick.pickedPoint && terrainHeight(pick.pickedPoint.x, pick.pickedPoint.z) > 0.05) {
       target = pick.pickedPoint.clone();
     }

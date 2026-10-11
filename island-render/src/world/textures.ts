@@ -1,5 +1,5 @@
 import { DynamicTexture, Texture, type Scene } from "@babylonjs/core";
-import { fbm, noise2 } from "./noise";
+import { fbm } from "./noise";
 
 // Textures generated on a 2D canvas at startup. They work the same on WebGPU and
 // WebGL 2 and stand in until proper Blender-baked textures exist.
@@ -38,16 +38,6 @@ function tileNoise(u: number, v: number, freq: number, seed: number, octaves = 4
   const n1 = fbm(Math.cos(a) * freq + 50, Math.sin(a) * freq + Math.cos(b) * freq, octaves, seed);
   const n2 = fbm(Math.sin(b) * freq + 90, Math.cos(a) * freq * 0.5 + Math.sin(a) * freq, octaves, seed + 7);
   return (n1 + n2) * 0.5;
-}
-
-/** Fine sand grain, grey-scale around white so vertex colours set the hue. */
-export function createSandDetailTexture(scene: Scene): DynamicTexture {
-  return makeTexture("sandDetail", scene, 256, (u, v) => {
-    const grain = noise2(u * 256, v * 256, 3) * 0.5 + noise2(u * 64, v * 64, 4) * 0.5;
-    const ripple = tileNoise(u, v, 2.0, 9, 3);
-    const value = 205 + grain * 40 + ripple * 25 - 25;
-    return [value, value, value, 255];
-  });
 }
 
 /** Height field → tangent-space normal map, tileable. Used for the moving water surface. */

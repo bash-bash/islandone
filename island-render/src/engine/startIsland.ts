@@ -5,7 +5,7 @@ import { createWater } from "../water/water";
 import { AssetLibrary } from "../world/assets";
 import { buildBeach } from "../world/beachLayout";
 import { createSkyAndLight } from "../world/sky";
-import { createTerrain, terrainHeight } from "../world/terrain";
+import { loadTerrain, terrainHeight } from "../world/terrain";
 import { createOrbitCamera } from "./camera";
 import { createEngine } from "./createEngine";
 import { statsStore } from "./stats";
@@ -34,7 +34,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     [camera.alpha, camera.beta, camera.radius] = cam;
   }
   const { shadows, skyReflection } = createSkyAndLight(scene);
-  const terrain = createTerrain(scene);
+  const terrain = await loadTerrain(scene);
   const water = createWater(scene, skyReflection.cubeTexture);
   const characterStart = new Vector3(-1.4, terrainHeight(-1.4, -0.6), -0.6);
   let character: Character | null = null;
@@ -68,7 +68,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
   try {
     await Promise.all([
       buildBeach(library, scene, shadows),
-      createCharacter(scene, shadows, terrain, characterStart)
+      createCharacter(scene, shadows, (m) => terrain.includes(m), characterStart)
         .then((c) => (character = c))
         .catch((err) => {
           // Keep the scene usable if the character file is missing or broken.
