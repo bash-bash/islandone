@@ -12,6 +12,7 @@ import {
   Vector3,
   Vector4,
   VertexData,
+  type AbstractMesh,
   type Camera,
   type Scene,
   type BaseTexture,
@@ -54,6 +55,8 @@ export interface Water {
   mesh: Mesh;
   update(timeSeconds: number): void;
   setFoamField(field: { texture: BaseTexture; region: Vector4 }): void;
+  /** Meshes the water can see through to (sea floor, rocks, posts). Default: all opaque meshes. */
+  setDepthCasters(meshes: AbstractMesh[]): void;
 }
 
 export function createWater(scene: Scene, o: WaterOptions): Water {
@@ -136,6 +139,9 @@ export function createWater(scene: Scene, o: WaterOptions): Water {
   const screen = new Vector2();
   return {
     mesh,
+    setDepthCasters(meshes) {
+      depthMap.renderList = meshes;
+    },
     setFoamField(field) {
       foamField = field.texture;
       foamRegion = field.region;

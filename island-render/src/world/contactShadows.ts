@@ -1,7 +1,7 @@
 import { Color3, Constants, Matrix, Mesh, StandardMaterial, Vector3, VertexData, type AbstractMesh, type Scene } from "@babylonjs/core";
 import { WATER_LEVEL, terrainHeight } from "./terrain";
 
-const GRID = 8; // quads per side of each draped blob
+const GRID = 6; // quads per side of each draped blob
 const TINT = new Color3(0.62, 0.48, 0.38); // warm brown, like the contact shadows in the reference
 
 /**

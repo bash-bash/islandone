@@ -10,7 +10,7 @@ import { buildBeach } from "../world/beachLayout";
 import { createContactShadows } from "../world/contactShadows";
 import { createSkyAndLight, HORIZON, ZENITH } from "../world/sky";
 import { windState } from "../world/wind";
-import { loadTerrain, terrainHeight } from "../world/terrain";
+import { WATER_LEVEL, loadTerrain, terrainHeight } from "../world/terrain";
 import { createOrbitCamera } from "./camera";
 import { createEngine } from "./createEngine";
 import { setupLook } from "./look";
@@ -101,6 +101,17 @@ export async function startIsland(canvas: HTMLCanvasElement) {
         !(characterRoot && m.isDescendantOf(characterRoot)),
     );
     water.setFoamField(buildFoamField(scene, candidates));
+    // The water only needs the depth of what lies under or at it: skip vegetation and props up on
+    // the beach, which saves a whole extra pass over the jungle.
+    water.setDepthCasters(
+      scene.meshes.filter(
+        (m) =>
+          m.getTotalVertices() > 0 &&
+          !/Bush|Fern|Grass|Palm|Pebbles|contactShadows|caustics|^water|^sky$|^clouds$/.test(m.name) &&
+          !(characterRoot && m.isDescendantOf(characterRoot)) &&
+          m.getBoundingInfo().boundingBox.minimumWorld.y < WATER_LEVEL + 0.4,
+      ),
+    );
     // Contact shadows: skip dense ground cover (grass, ferns) and the pebbles' tiny blobs.
     createContactShadows(
       scene,

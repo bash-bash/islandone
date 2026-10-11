@@ -21,7 +21,7 @@ URL-Parameter:
 | `?post=0` | Nachbearbeitung (Farbkorrektur, Bloom) aus |
 | `?ao=1` | Ambient Occlusion (SSAO) an, nur zum Ausprobieren: dunkelt den Meeresboden durch das Wasser ab und kostet viel |
 
-Kamera: linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Die Figur steuert man nicht; sie handelt selbst (siehe Charakter). Oben links zeigt das HUD Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
+Kamera: linke Maustaste drehen, rechte Maustaste verschieben, Mausrad zoomen. Die Figur steuert man nicht; sie handelt selbst (siehe Charakter). Das Zahnrad oben rechts (oder `?debug` in der URL) zeigt Renderer, FPS, Draw Calls, Dreiecke und den Ladestand der Assets.
 
 Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`, `library`), z. B. für den Babylon-Inspector.
 
@@ -40,7 +40,8 @@ Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`
 | Assets | 24 GLBs, LOD-Umschaltung nach Kameradistanz, Collider ausgeblendet; wiederholte Teile als Thin Instances (ein Draw Call pro Mesh) | `src/world/assets.ts` |
 | Szene | Hütte, Werkbank, Feuerstelle (Steinring, Feuerholz, Dreibein aus Stangen, Flammen, Rauch, flackerndes Licht), Holzstapel, Bretter, Kisten aus Brettern, Seilrollen, niedriger Steg aus Stangen und Planken in flachem, klarem Wasser, dunkle Felsen knapp unter der Wasseroberfläche, Felsen, Felsinseln im Meer, Kieselgruppen im Sand, Möwe, Seesterne, Palmen. Dichter Dschungelrand aus Büschen, Farnen und Gras in Gruppen, Grün am Fuß der Felsen, Grasbüschel, die auf den Sand auslaufen, rote Akzentpflanzen; jede Pflanze bekommt per Instanzfarbe einen eigenen Grünton | `src/world/beachLayout.ts`, `src/world/camp.ts` |
 | Charakter | `IO_Character_A` mit Idle und Walk (weich überblendet). Autonom, der Zuschauer steuert nicht: bis island-sim die Figur über `goTo` bewegt, läuft sie zwischen Feuer, Holzstapel, Werkbank und Ufer hin und her. Kollision in 2D: Hüttenwände (die Tür ist begehbar), Palmenstämme, Felsen, Werkbank aus den `_COL`-Proxys der Assets, dazu Holzstapel, Kisten und Feuerstelle; der Steg ist begehbar, tiefes Wasser nicht. Keine Wegfindung: sie läuft gerade und gleitet an Hindernissen entlang. Fällt auf eine Kapsel zurück, wenn das GLB fehlt | `src/character/character.ts`, `collision.ts`, `placeholder.ts` |
-| HUD | React über dem Canvas | `src/ui/` |
+| HUD | Zuschauer-HUD nach dem Referenzbild, React über dem Canvas: Tag und Uhrzeit, Bedürfnisse der Figur (Gesundheit, Hunger, Durst, Energie), getragene Ressourcen, aktuelle Ziele, letzte Entdeckung, Werkzeuggürtel. Nur Anzeige, nichts davon steuert die Figur. Die Werte kommen bis zu island-sim aus einem Platzhalter mit den Zahlen des Referenzbilds, Uhr und Bedürfnisse laufen langsam weiter | `src/ui/Hud.tsx`, `figureState.ts`, `icons.tsx` |
+| Performance | Pflanzen in drei LOD-Ringen um das Camp (volle Details bis 9 m), Kaustiken nur auf nassen Dreiecken, die Tiefenkarte fürs Wasser nur mit Dingen am oder unter Wasser, Kontaktschatten mit weniger Dreiecken. Standardansicht: rund 1,0 Mio. Dreiecke und 240 Draw Calls in WebGL 2 | `beachLayout.ts`, `caustics.ts`, `water.ts`, `contactShadows.ts` |
 
 Weitere Platzhalter: Kochtopf (Halbkugel). Feuer, Rauch und Schaum entstehen im Browser, wie in der Asset-Liste vorgesehen.
 

@@ -25,5 +25,5 @@ await page.goto(url);
 await page.waitForFunction(() => !document.querySelector(".hud-loading"), null, { timeout: 180_000 });
 await page.waitForTimeout(5000);
 await page.screenshot({ path: out, timeout: 180_000 }); // software WebGPU can take a while per frame
-console.log((await page.locator(".hud-stats").innerText()).replace(/\n/g, " "));
+console.log(((await page.locator(".hud-stats").textContent()) ?? "").replace(/\s+/g, " ")); // hidden unless ?debug
 await browser.close();

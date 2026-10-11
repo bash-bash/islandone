@@ -135,9 +135,9 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene) {
   const scatterRings = (id: AssetId, p: Placement[]) => {
     tint(p, id.length);
     const ring = (q: Placement) => Math.hypot(q.position.x - CAMP_CENTRE.x, q.position.z - CAMP_CENTRE.z);
-    scatter(id, p.filter((q) => ring(q) < 14), 0, `${id}_near`);
-    scatter(id, p.filter((q) => ring(q) >= 14 && ring(q) < 26), 1, `${id}_mid`);
-    scatter(id, p.filter((q) => ring(q) >= 26), 2, `${id}_far`);
+    scatter(id, p.filter((q) => ring(q) < 9), 0, `${id}_near`);
+    scatter(id, p.filter((q) => ring(q) >= 9 && ring(q) < 18), 1, `${id}_mid`);
+    scatter(id, p.filter((q) => ring(q) >= 18), 2, `${id}_far`);
   };
 
   // --- Camp -------------------------------------------------------------------------
@@ -294,7 +294,7 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene) {
   scatter(
     "IO_Fern_A",
     clusters(51, 10, { x: [-12, -7.5], z: [-12, 14] }, 1, 3, 0.6, [0.8, 1.1]).map((p) => ({ ...p, color: new Color3(3.6, 0.42, 0.75) })),
-    0,
+    1,
     "Fern_Red",
   );
   // Bushes tucked against the beach rocks and hugging the hut, as in the reference.

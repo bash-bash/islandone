@@ -51,6 +51,14 @@ export function createCaustics(scene: Scene, terrain: AbstractMesh[]) {
         m.dispose();
         continue;
       }
+      // Keep only triangles that touch water: most of the beach and the surround is dry land.
+      const src_ = m.getIndices()!;
+      const wet: number[] = [];
+      for (let t = 0; t < src_.length; t += 3) {
+        const a = src_[t], b = src_[t + 1], c = src_[t + 2];
+        if (colors[a * 4] > 0 || colors[b * 4] > 0 || colors[c * 4] > 0) wet.push(a, b, c);
+      }
+      m.setIndices(wet);
       m.setVerticesData(VertexBuffer.UVKind, uvs);
       m.setVerticesData(VertexBuffer.ColorKind, colors);
       m.removeVerticesData(VertexBuffer.UV2Kind);
