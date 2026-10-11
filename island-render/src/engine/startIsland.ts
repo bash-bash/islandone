@@ -16,6 +16,7 @@ import { createEngine } from "./createEngine";
 import { setupLook } from "./look";
 import { measureMemory, runBenchmark } from "./measure";
 import { hardwareScaling, pickQuality } from "./quality";
+import { precompileShaders } from "./warmup";
 import { statsStore } from "./stats";
 
 export async function startIsland(canvas: HTMLCanvasElement) {
@@ -140,6 +141,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
         }),
     );
     (character as Character | null)?.setCollision(collision);
+    await precompileShaders(scene, shadows);
     statsStore.set({ ready: true, memory: measureMemory(engine, scene) });
   } catch (err) {
     console.error(err);

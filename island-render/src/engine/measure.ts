@@ -21,6 +21,9 @@ export interface BenchResult {
   /** FPS of the slowest 1 % of frames. */
   low1Fps: number;
   p95FrameMs: number;
+  /** Frames over 50 ms (visible stutter) and the longest frame. */
+  hitches: number;
+  maxFrameMs: number;
   memory: MemoryStats;
 }
 
@@ -95,6 +98,8 @@ export function runBenchmark(engine: AbstractEngine, scene: Scene, camera: ArcRo
         avgFps: Math.round((frameMs.length / elapsed) * 10) / 10,
         low1Fps: Math.round((1000 / at(0.99)) * 10) / 10,
         p95FrameMs: Math.round(at(0.95) * 10) / 10,
+        hitches: frameMs.filter((ms) => ms > 50).length,
+        maxFrameMs: Math.round(sorted[sorted.length - 1]),
         memory: measureMemory(engine, scene),
       });
     });

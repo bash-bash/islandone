@@ -196,7 +196,7 @@ export function Hud() {
             <b>
               {s.bench === "running"
                 ? "läuft …"
-                : `Ø ${s.bench.avgFps} FPS · 1 % ${s.bench.low1Fps} · p95 ${s.bench.p95FrameMs} ms`}
+                : `Ø ${s.bench.avgFps} FPS · 1 % ${s.bench.low1Fps} · p95 ${s.bench.p95FrameMs} ms · Ruckler ${s.bench.hitches} (max ${s.bench.maxFrameMs} ms)`}
             </b>
           </div>
         )}
