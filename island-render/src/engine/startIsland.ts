@@ -2,11 +2,11 @@ import { type AbstractMesh, Mesh, Scene, SceneInstrumentation, Vector3 } from "@
 import { createCharacter, type Character } from "../character/character";
 import { createCharacterPlaceholder } from "../character/placeholder";
 import { createCaustics } from "../water/caustics";
-import { createContactFoam } from "../water/contactFoam";
+import { buildFoamField } from "../water/foamField";
 import { createWater } from "../water/water";
 import { AssetLibrary } from "../world/assets";
 import { buildBeach } from "../world/beachLayout";
-import { createSkyAndLight } from "../world/sky";
+import { createSkyAndLight, HORIZON, ZENITH } from "../world/sky";
 import { windState } from "../world/wind";
 import { loadTerrain, terrainHeight } from "../world/terrain";
 import { createOrbitCamera } from "./camera";
@@ -29,14 +29,19 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     [camera.alpha, camera.beta, camera.radius] = cam;
     camera.upperBetaLimit = Math.max(camera.upperBetaLimit ?? 0, cam[1]);
   }
-  const { shadows, skyReflection } = createSkyAndLight(scene);
+  const { shadows, sun } = createSkyAndLight(scene);
   setupLook(scene, camera);
   const terrain = await loadTerrain(scene);
   const caustics = createCaustics(scene, terrain);
-  const water = createWater(scene, skyReflection.cubeTexture);
+  const water = createWater(scene, {
+    camera,
+    sunDirection: sun.direction,
+    sunColor: sun.diffuse.scale(sun.intensity),
+    zenith: ZENITH,
+    horizon: HORIZON,
+  });
   const characterStart = new Vector3(-1.4, terrainHeight(-1.4, -0.6), -0.6);
   let character: Character | null = null;
-  let foam: ReturnType<typeof createContactFoam> | null = null;
 
   const library = new AssetLibrary(scene, shadows);
   library.onProgress = (s) => statsStore.set({ assetsLoaded: s.loaded, assetsTotal: s.total });
@@ -50,7 +55,6 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     const t = (performance.now() - start) / 1000;
     water.update(t);
     caustics.update(t);
-    foam?.update(t);
     windState.time = t;
     library.update(camera.position);
     character?.update(Math.min(engine.getDeltaTime(), 100) / 1000);
@@ -79,20 +83,20 @@ export async function startIsland(canvas: HTMLCanvasElement) {
           createCharacterPlaceholder(scene, shadows, characterStart, -0.9);
         }),
     ]);
-    // Foam rings where rocks, posts and stones break the surface (highest LOD only).
+    // Foam field for the water: shoreline plus rocks, posts and stones breaking the surface (highest LOD only).
     const skip = new Set<AbstractMesh>([...terrain, ...caustics.meshes, water.mesh]);
     const characterRoot = scene.getTransformNodeByName("Character");
-    foam = createContactFoam(
-      scene,
-      scene.meshes.filter(
-        (m) =>
-          !skip.has(m) &&
-          m.getTotalVertices() > 0 &&
-          (!(m instanceof Mesh) || m.thinInstanceCount <= 300) &&
-          !/_LOD[1-9]$|_COL(_\d+)?$|^sky$|^clouds$/.test(m.name) &&
-          !(characterRoot && m.isDescendantOf(characterRoot)),
-      ),
+    const waterTint = scene.getMeshByName("waterTint");
+    const candidates = scene.meshes.filter(
+      (m) =>
+        !skip.has(m) &&
+        m !== waterTint &&
+        m.getTotalVertices() > 0 &&
+        (!(m instanceof Mesh) || m.thinInstanceCount <= 300) &&
+        !/_LOD[1-9]$|_COL(_\d+)?$|^sky$|^clouds$/.test(m.name) &&
+        !(characterRoot && m.isDescendantOf(characterRoot)),
     );
+    water.setFoamField(buildFoamField(scene, candidates));
     statsStore.set({ ready: true });
   } catch (err) {
     console.error(err);

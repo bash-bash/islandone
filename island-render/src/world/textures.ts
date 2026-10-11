@@ -100,7 +100,7 @@ export function createCausticTexture(scene: Scene, seed: number): DynamicTexture
         } else if (d < f2) f2 = d;
       }
     }
-    const line = Math.pow(Math.max(0, 1 - (f2 - f1) * 6), 4);
+    const line = Math.pow(Math.max(0, 1 - (f2 - f1) * 7), 4);
     const c = Math.min(255, line * 255);
     return [c, c, c, 255];
   });
@@ -153,15 +153,39 @@ export function createCloudTexture(scene: Scene): DynamicTexture {
   return tex;
 }
 
-/** Tileable white foam: lacy patches with holes, alpha carries the pattern. */
-export function createFoamTexture(scene: Scene): DynamicTexture {
-  const tex = makeTexture("foam", scene, 256, (u, v) => {
-    const big = tileNoise(u, v, 2.2, 61, 4);
-    const fine = tileNoise(u, v, 6, 67, 3);
-    const n = big * 0.6 + fine * 0.4;
-    const a = Math.min(1, Math.max(0, (n - 0.4) / 0.16));
-    return [255, 255, 255, a * 255];
+/**
+ * Tileable foam lace: a dense web of thin bright cell borders with small bubbles,
+ * like the foam lines on the reference beach. The water shader dissolves it with
+ * a threshold, so weak foam shows only the brightest threads.
+ */
+export function createLaceTexture(scene: Scene): DynamicTexture {
+  const cells = 9;
+  const r = rng(91);
+  const pts: number[] = [];
+  for (let i = 0; i < cells * cells; i++) pts.push(r(), r());
+  return makeTexture("foamLace", scene, 256, (u, v) => {
+    const gx = u * cells + (tileNoise(u, v, 1.7, 93, 3) - 0.5) * 1.2;
+    const gy = v * cells + (tileNoise(v, u, 1.7, 97, 3) - 0.5) * 1.2;
+    const cx = Math.floor(gx);
+    const cy = Math.floor(gy);
+    let f1 = 9;
+    let f2 = 9;
+    for (let oy = -1; oy <= 1; oy++) {
+      for (let ox = -1; ox <= 1; ox++) {
+        const ix = (((cx + ox) % cells) + cells) % cells;
+        const iy = (((cy + oy) % cells) + cells) % cells;
+        const k = (iy * cells + ix) * 2;
+        const d = Math.hypot(cx + ox + pts[k] - gx, cy + oy + pts[k + 1] - gy);
+        if (d < f1) {
+          f2 = f1;
+          f1 = d;
+        } else if (d < f2) f2 = d;
+      }
+    }
+    const thread = Math.max(0, 1 - (f2 - f1) * 4.5) ** 1.5; // 1 on the cell border
+    const bubbles = tileNoise(u, v, 14, 99, 2);
+    const value = Math.min(1, thread * 0.85 + Math.max(0, bubbles - 0.62) * 2.2 * thread + tileNoise(u, v, 4, 101, 2) * 0.12);
+    const c = value * 255;
+    return [c, c, c, 255];
   });
-  tex.hasAlpha = true;
-  return tex;
 }

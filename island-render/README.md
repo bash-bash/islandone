@@ -34,7 +34,7 @@ Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`
 | Himmel und Licht | Verlaufs-Himmelskuppel mit ziehenden Wolken über dem Horizont, kräftige Sonne mit weichen Schatten, Himmels-Fülllicht, leichter Dunst | `src/world/sky.ts` |
 | Bildstimmung | Nachbearbeitung: neutrales Tonemapping (KHR PBR Neutral, hält Farben satt), Sättigung, kühle Schatten, leichter Bloom, Schärfe, Vignette | `src/engine/look.ts` |
 | Terrain | `IO_Terrain_Beach_Test_30m`, `IO_Seafloor_Test_30m` und ein grober Rand bis zum Horizont aus Blender (`assets/terrain`, `islandone_terrain.py`), dazu ein Höhenraster für Platzierung, Wassertiefe und Klicks | `src/world/terrain.ts` |
-| Wasser | Türkis nach Tiefe und Transparenz, zwei laufende Normal-Maps, Fresnel-Spiegelung des Himmels, Uferschaum, der an den Strand läuft; laufende Kaustiken auf dem Meeresboden (zwei Muster, nach Tiefe ausgeblendet); pulsierende Schaumringe überall, wo Felsen, Steine und Stegpfosten die Oberfläche durchstoßen | `src/water/water.ts`, `caustics.ts`, `contactFoam.ts` |
+| Wasser | Eigener Shader (GLSL und WGSL), zweimal gezeichnet: Multiplizieren (Transmission) und Addieren (Streulicht, Himmel, Glitzern, Schaum). Die Wasserdicke pro Pixel kommt aus der Szenentiefe, dadurch glasklares Flachwasser, das mit der Tiefe türkis und dann tiefblau wird; Felsen unter Wasser bleiben sichtbar. Spitzenschaum aus einer Lace-Textur, gesteuert über ein beim Start berechnetes Distanzfeld (Abstand zur Küste und zu Felsen, Steinen, Stegpfosten): Saum am Ufer, einlaufende Schaumlinien, pulsierende Ringe. Leichtes Auf und Ab am Ufer, laufende Kaustiken auf dem Meeresboden. Farben und Stärken in `WATER_LOOK` | `src/water/water.ts`, `waterShader.ts`, `foamField.ts`, `caustics.ts` |
 | Wind | Palmen, Büsche, Farne und Gras wiegen sich im Wind (Material-Plugin im Vertex-Shader, GLSL und WGSL): langsames Schwingen nach Höhe, Böen, Blattflattern, jede Pflanze phasenversetzt. Die Schatten bleiben in Ruhelage | `src/world/wind.ts`, Einstellungen je Asset in `assets.ts` |
 | Assets | 24 GLBs, LOD-Umschaltung nach Kameradistanz, Collider ausgeblendet; wiederholte Teile als Thin Instances (ein Draw Call pro Mesh) | `src/world/assets.ts` |
 | Szene | Hütte, Werkbank, Feuerstelle (Steinring, Feuerholz, Dreibein aus Stangen, Flammen, Rauch, flackerndes Licht), Holzstapel, Bretter, Steg aus Stangen und Planken, Felsen, Möwe, Seesterne, Palmen, Büsche, Farne, Gras | `src/world/beachLayout.ts`, `src/world/camp.ts` |
@@ -69,7 +69,7 @@ Läuft über SwiftShader (Software-Rendering), die FPS im HUD sind dort bedeutun
 ## Nächste Schritte
 
 1. Charakter: Kollision mit Hütte, Feuer und Holz; weitere Clips (PickUp, Carry…) an Aktionen hängen, sobald island-sim Aktionen liefert.
-2. Wasser als eigener Shader: Refraktion, echte Wellen.
+2. Wasser: Brechung (Verzerrung des Bodens), echte Wellen, Schaum auch außerhalb des Strandtest-Bereichs (Distanzfeld deckt nur x −14…34, z −28…28 ab). Meeresboden am Steg tiefer modellieren, damit das Wasser dort dunkler wird wie im Zielbild.
 3. Wind auch in den Schatten; Wind-Gewichte aus den GLBs (`TEXCOORD_1`) nutzen statt der Höhe, sobald die Palmen sie auch haben.
 4. Kisten, Topf und weitere fehlende Requisiten aus der Asset-Liste.
 5. Licht: HDR-Umgebung statt Verlaufskuppel, Ambient Occlusion ohne Fehler am Wasser.

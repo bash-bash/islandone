@@ -10,8 +10,8 @@ import { WATER_LEVEL } from "../world/terrain";
  */
 export function createCaustics(scene: Scene, terrain: AbstractMesh[]) {
   const layers = [
-    { tex: createCausticTexture(scene, 11), scale: 1 / 3.2, speed: [0.018, 0.011] },
-    { tex: createCausticTexture(scene, 23), scale: 1 / 4.4, speed: [-0.012, 0.016] },
+    { tex: createCausticTexture(scene, 11), scale: 1 / 1.7, speed: [0.018, 0.011] },
+    { tex: createCausticTexture(scene, 23), scale: 1 / 2.3, speed: [-0.012, 0.016] },
   ];
   const meshes: Mesh[] = [];
 
@@ -19,7 +19,7 @@ export function createCaustics(scene: Scene, terrain: AbstractMesh[]) {
     const mat = new StandardMaterial(`caustics${li}`, scene);
     mat.disableLighting = true;
     mat.emissiveTexture = layer.tex;
-    mat.emissiveColor = new Color3(0.2, 0.24, 0.22);
+    mat.emissiveColor = new Color3(0.16, 0.2, 0.19);
     mat.alphaMode = Constants.ALPHA_ADD;
     mat.alpha = 0.999; // forces the transparent pass so alphaIndex ordering applies
     mat.fogEnabled = false;

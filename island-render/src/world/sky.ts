@@ -4,8 +4,6 @@ import {
   DirectionalLight,
   HemisphericLight,
   MeshBuilder,
-  ReflectionProbe,
-  RenderTargetTexture,
   Scene,
   ShadowGenerator,
   StandardMaterial,
@@ -16,8 +14,8 @@ import {
 } from "@babylonjs/core";
 import { createCloudTexture } from "./textures";
 
-const ZENITH = new Color3(0.16, 0.5, 0.96);
-const HORIZON = new Color3(0.68, 0.87, 1.0);
+export const ZENITH = new Color3(0.16, 0.5, 0.96);
+export const HORIZON = new Color3(0.68, 0.87, 1.0);
 const SUN_DIR = new Vector3(-0.55, -1, 0.45).normalize();
 
 export interface SkyAndLight {
@@ -25,8 +23,6 @@ export interface SkyAndLight {
   clouds: Mesh;
   sun: DirectionalLight;
   shadows: ShadowGenerator;
-  /** Static cube capture of the sky, used for water reflections. */
-  skyReflection: ReflectionProbe;
 }
 
 /**
@@ -83,12 +79,7 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
   shadows.normalBias = 0.02;
   shadows.darkness = 0.3;
 
-  const skyReflection = new ReflectionProbe("skyProbe", 128, scene);
-  skyReflection.renderList!.push(sky, clouds);
-  skyReflection.position = new Vector3(0, 2, 0);
-  skyReflection.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
-
-  return { sky, clouds, sun, shadows, skyReflection };
+  return { sky, clouds, sun, shadows };
 }
 
 /** Ring of cumulus clouds from the horizon up to ~45°, drifting slowly. */
