@@ -147,13 +147,14 @@ export async function buildDock(lib: AssetLibrary, startX: number, length: numbe
   }
 
   const posts: Placement[] = [];
-  const postHeight = 3;
+  const postHeight = 5.5; // reaches the floor of the deeper water along the pier (~-3.8 m)
   for (let x = startX + 0.2; x <= startX + length + 0.01; x += (length - 0.4) / 3) {
     for (const side of [-1, 1]) {
       const top = deckY + 0.35 + (side > 0 ? 0.05 : 0);
       posts.push({
         position: new Vector3(x, top - postHeight / 2, z + side * halfWidth),
         rotation: new Vector3(0, 0, Math.PI / 2),
+        scale: new Vector3(postHeight / 3, 1, 1), // IO_Pole_Long_A is 3 m
       });
     }
   }
