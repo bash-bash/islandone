@@ -38,9 +38,32 @@ export interface CameraRig {
   focus(x: number, z: number, lift?: number): void;
   /** Reset View: glide back to the start view. */
   reset(): void;
+  /** Tall things the camera must stay above (hut, palms), as ground-plane boxes with a top height. */
+  setObstacles(boxes: Obstacle[]): void;
+}
+
+export interface Obstacle {
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  top: number;
 }
 
 const GLIDE_SECONDS = 1.2;
+// Panning stays over the island; the camera never dips into the ground.
+const TARGET_BOUNDS = { x: [-22, 22], y: [0, 3], z: [-22, 22] } as const;
+const CLEARANCE = 1.2; // m above the terrain under the camera
+const JUNGLE_CLEARANCE = 2.8; // above the bush tops inland (x < −8)
+const OBSTACLE_CLEARANCE = 0.6;
+
+/** Lowest allowed camera height at (x, z). */
+function floorAt(x: number, z: number, obstacles: Obstacle[]) {
+  const jungle = Math.min(1, Math.max(0, (-5 - x) / 3)); // 0 on the beach, 1 from x = −8 inland
+  let y = terrainHeight(x, z) + CLEARANCE + (JUNGLE_CLEARANCE - CLEARANCE) * jungle;
+  for (const o of obstacles) if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) y = Math.max(y, o.top + OBSTACLE_CLEARANCE);
+  return y;
+}
 const FOCUS_RADIUS = 10;
 
 /** Smooth camera moves on top of the orbit controls. Any drag or wheel by the viewer cancels a move. */
@@ -48,6 +71,7 @@ export function createCameraRig(camera: ArcRotateCamera, canvas: HTMLCanvasEleme
   let from: ViewPose | null = null;
   let to: ViewPose | null = null;
   let t = 0;
+  let obstacles: Obstacle[] = [];
 
   const cancel = () => (to = null);
   canvas.addEventListener("pointerdown", cancel);
@@ -72,6 +96,26 @@ export function createCameraRig(camera: ArcRotateCamera, canvas: HTMLCanvasEleme
     if (t >= 1) to = null;
   });
 
+  camera.getScene().onBeforeRenderObservable.add(() => {
+    const tg = camera.target;
+    const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, v));
+    const x = clamp(tg.x, TARGET_BOUNDS.x);
+    const y = clamp(tg.y, TARGET_BOUNDS.y);
+    const z = clamp(tg.z, TARGET_BOUNDS.z);
+    if (x !== tg.x || y !== tg.y || z !== tg.z) {
+      const { alpha, beta, radius } = camera;
+      camera.target = new Vector3(x, y, z);
+      [camera.alpha, camera.beta, camera.radius] = [alpha, beta, radius];
+    }
+    // Steeper until the camera clears the ground, the bush tops and tall objects below it.
+    for (let i = 0; i < 20; i++) {
+      camera.getViewMatrix(true);
+      const p = camera.position;
+      if (p.y >= floorAt(p.x, p.z, obstacles) || camera.beta <= (camera.lowerBetaLimit ?? 0.1)) break;
+      camera.beta -= 0.02;
+    }
+  });
+
   return {
     focus(x, z, lift = 1) {
       glide({
@@ -83,6 +127,9 @@ export function createCameraRig(camera: ArcRotateCamera, canvas: HTMLCanvasEleme
     },
     reset() {
       glide({ ...HOME_VIEW, target: HOME_VIEW.target.clone() });
+    },
+    setObstacles(boxes) {
+      obstacles = boxes;
     },
   };
 }

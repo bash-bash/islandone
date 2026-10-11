@@ -20,6 +20,8 @@ export interface QualityProfile {
   sharpen: boolean;
   /** Animated light patterns on the seafloor. */
   caustics: boolean;
+  /** Share of bushes, ferns and grass placed (1 = all). */
+  vegetationDensity: number;
   /** Multiplies every LOD switch distance: smaller switches to coarser meshes sooner. */
   lodScale: number;
 }
@@ -35,6 +37,7 @@ export const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
     bloom: false,
     sharpen: false,
     caustics: false,
+    vegetationDensity: 0.5,
     lodScale: 0.6,
   },
   medium: {
@@ -47,6 +50,7 @@ export const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
     bloom: true,
     sharpen: false,
     caustics: true,
+    vegetationDensity: 0.75,
     lodScale: 0.8,
   },
   high: {
@@ -59,6 +63,7 @@ export const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
     bloom: true,
     sharpen: true,
     caustics: true,
+    vegetationDensity: 1,
     lodScale: 1,
   },
 };

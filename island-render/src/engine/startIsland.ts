@@ -88,7 +88,7 @@ export async function startIsland(canvas: HTMLCanvasElement) {
 
   try {
     const [collisionExtras] = await Promise.all([
-      buildBeach(library, scene),
+      buildBeach(library, scene, quality.vegetationDensity),
       createCharacter(scene, shadows, characterStart)
         .then((c) => (character = c))
         .catch((err) => {
@@ -129,6 +129,15 @@ export async function startIsland(canvas: HTMLCanvasElement) {
     );
     // Assigned in the load callback above, which TypeScript does not track.
     collision = buildCollisionWorld(scene, collisionExtras);
+    // The camera stays above the hut, palms and workbench instead of passing through them.
+    cameraRigRef.current?.setObstacles(
+      scene.transformNodes
+        .filter((n) => /^IO_(Hut|Palm|Workbench)/.test(n.name) && !n.parent)
+        .map((n) => {
+          const { min, max } = n.getHierarchyBoundingVectors(true, (m) => m.isEnabled() && !/_COL/.test(m.name));
+          return { x0: min.x, z0: min.z, x1: max.x, z1: max.z, top: max.y };
+        }),
+    );
     (character as Character | null)?.setCollision(collision);
     statsStore.set({ ready: true, memory: measureMemory(engine, scene) });
   } catch (err) {

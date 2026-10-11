@@ -126,13 +126,16 @@ function ringAround(seed: number, rocks: typeof ROCK_GREENERY, perRock: number, 
   return out;
 }
 
-export async function buildBeach(lib: AssetLibrary, scene: Scene) {
+/** `vegetationDensity` (0…1, from the quality profile) thins out bushes, ferns and grass evenly. */
+export async function buildBeach(lib: AssetLibrary, scene: Scene, vegetationDensity = 1) {
   const jobs: Promise<unknown>[] = [];
   const place = (id: AssetId, p: Placement, name?: string) => jobs.push(lib.place(id, p, name));
   const scatter = (id: AssetId, p: Placement[], lod = 0, name?: string) => jobs.push(lib.scatter(id, p, lod, name));
   // Thin instances share one LOD level, so split large scatters into rings around the camp:
   // full detail where the camera usually is, cheaper levels further out.
-  const scatterRings = (id: AssetId, p: Placement[]) => {
+  const scatterRings = (id: AssetId, all: Placement[]) => {
+    // Golden-ratio sequence keeps an even spread of what remains, at any density.
+    const p = all.filter((_, i) => ((i * 0.6180339887) % 1) < vegetationDensity);
     tint(p, id.length);
     const ring = (q: Placement) => Math.hypot(q.position.x - CAMP_CENTRE.x, q.position.z - CAMP_CENTRE.z);
     scatter(id, p.filter((q) => ring(q) < 9), 0, `${id}_near`);

@@ -32,8 +32,8 @@ Im Browser-Konsolenfenster liegt `window.islandone` (`engine`, `scene`, `camera`
 | Bereich | Stand | Datei |
 |---|---|---|
 | Engine | WebGPU mit WebGL-2-Fallback | `src/engine/createEngine.ts` |
-| Kamera | Orbit, erhöht, Neigung und Zoom begrenzt; Startansicht wie im Referenzbild. Reset View und Focus Event gleiten in 1,2 s, jede Maus- oder Radbewegung bricht ab | `src/engine/camera.ts` |
-| Qualität | Profile Niedrig/Mittel/Hoch: Auflösung (Pixelverhältnis bis 1/1,5/2, Niedrig rendert mit 75 %), Schattenkarte 1024/2048/2048 mit weichem Filter nur auf Hoch, MSAA 1/2/4, Bloom und Schärfe, Kaustiken (aus auf Niedrig), LOD-Distanzen 60/80/100 % | `src/engine/quality.ts` |
+| Kamera | Orbit, erhöht, Neigung und Zoom begrenzt; Startansicht wie im Referenzbild. Reset View und Focus Event gleiten in 1,2 s, jede Maus- oder Radbewegung bricht ab. Verschieben bleibt über der Insel; die Kamera bleibt über Boden, Buschkronen, Hütte, Palmen und Werkbank (sie wird dafür steiler) | `src/engine/camera.ts` |
+| Qualität | Profile Niedrig/Mittel/Hoch: Auflösung (Pixelverhältnis bis 1/1,5/2, Niedrig rendert mit 75 %), Schattenkarte 1024/2048/2048 mit weichem Filter nur auf Hoch, MSAA 1/2/4, Bloom und Schärfe, Kaustiken (aus auf Niedrig), Büsche/Farne/Gras 50/75/100 %, LOD-Distanzen 60/80/100 % | `src/engine/quality.ts` |
 | Messung | FPS, JS-Heap (nur Chromium) und geschätzter GPU-Speicher (Texturen, Render-Targets, Geometrie) im Einstellungsfeld; Benchmark mit `?bench` | `src/engine/measure.ts` |
 | Himmel und Licht | Verlaufs-Himmelskuppel mit ziehenden Wolken über dem Horizont, kräftige Sonne (etwa 40° hoch, längere Schatten und weiches Relief) mit weichen Schatten, Himmels-Fülllicht, leichter Dunst | `src/world/sky.ts` |
 | Bildstimmung | Nachbearbeitung: neutrales Tonemapping (KHR PBR Neutral, hält Farben satt), Sättigung, kühle Schatten, leichter Bloom, Schärfe, Vignette | `src/engine/look.ts` |
