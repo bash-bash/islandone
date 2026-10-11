@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Rng > keeps a fixed sequence across code changes (golden values) 1`] = `
+[
+  518667457,
+  440444462,
+  4232892992,
+  3757857622,
+]
+`;
