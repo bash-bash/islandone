@@ -9,7 +9,7 @@ export function createOrbitCamera(scene: Scene, canvas: HTMLCanvasElement, targe
   const camera = new ArcRotateCamera("orbit", -Math.PI / 4, 0.9, 30, target, scene);
   camera.fov = 0.6; // slightly telephoto, flatter perspective like the reference
   camera.lowerBetaLimit = 0.35; // steepest top-down tilt
-  camera.upperBetaLimit = 1.25; // never down to ground level
+  camera.upperBetaLimit = 1.4; // flat enough to see the horizon and clouds, never down to ground level
   camera.lowerRadiusLimit = 5;
   camera.upperRadiusLimit = 60;
   camera.wheelDeltaPercentage = 0.01;

@@ -11,8 +11,10 @@ import {
   StandardMaterial,
   Vector3,
   VertexBuffer,
-  type Mesh,
+  Mesh,
+  VertexData,
 } from "@babylonjs/core";
+import { createCloudTexture } from "./textures";
 
 const ZENITH = new Color3(0.16, 0.5, 0.96);
 const HORIZON = new Color3(0.68, 0.87, 1.0);
@@ -20,6 +22,7 @@ const SUN_DIR = new Vector3(-0.55, -1, 0.45).normalize();
 
 export interface SkyAndLight {
   sky: Mesh;
+  clouds: Mesh;
   sun: DirectionalLight;
   shadows: ShadowGenerator;
   /** Static cube capture of the sky, used for water reflections. */
@@ -59,6 +62,8 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
   sky.infiniteDistance = true;
   sky.isPickable = false;
 
+  const clouds = createClouds(scene);
+
   const hemi = new HemisphericLight("skyFill", new Vector3(0.2, 1, -0.1), scene);
   hemi.intensity = 0.95;
   hemi.diffuse = new Color3(0.78, 0.9, 1.0);
@@ -79,9 +84,56 @@ export function createSkyAndLight(scene: Scene, shadowMapSize = 2048): SkyAndLig
   shadows.darkness = 0.3;
 
   const skyReflection = new ReflectionProbe("skyProbe", 128, scene);
-  skyReflection.renderList!.push(sky);
+  skyReflection.renderList!.push(sky, clouds);
   skyReflection.position = new Vector3(0, 2, 0);
   skyReflection.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
 
-  return { sky, sun, shadows, skyReflection };
+  return { sky, clouds, sun, shadows, skyReflection };
+}
+
+/** Ring of cumulus clouds from the horizon up to ~45°, drifting slowly. */
+function createClouds(scene: Scene): Mesh {
+  const radius = 470;
+  const cols = 64;
+  const rows = 10;
+  const maxElev = (45 * Math.PI) / 180;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  for (let r = 0; r <= rows; r++) {
+    const v = r / rows;
+    const e = v * maxElev - 0.02; // start just below the horizon line
+    for (let c = 0; c <= cols; c++) {
+      const u = c / cols;
+      const a = u * Math.PI * 2;
+      positions.push(Math.cos(a) * Math.cos(e) * radius, Math.sin(e) * radius, Math.sin(a) * Math.cos(e) * radius);
+      uvs.push(u, 1 - v); // DynamicTexture rows arrive flipped
+      if (r < rows && c < cols) {
+        const i = r * (cols + 1) + c;
+        indices.push(i, i + 1, i + cols + 1, i + 1, i + cols + 2, i + cols + 1);
+      }
+    }
+  }
+  const mesh = new Mesh("clouds", scene);
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.uvs = uvs;
+  vd.indices = indices;
+  vd.applyToMesh(mesh);
+  const tex = createCloudTexture(scene);
+  const mat = new StandardMaterial("cloudsMat", scene);
+  mat.disableLighting = true;
+  mat.emissiveTexture = tex;
+  mat.opacityTexture = tex;
+  mat.backFaceCulling = false;
+  mat.fogEnabled = false;
+  mat.disableDepthWrite = true;
+  mesh.material = mat;
+  mesh.infiniteDistance = true;
+  mesh.isPickable = false;
+  mesh.alphaIndex = 0;
+  scene.onBeforeRenderObservable.add(() => {
+    tex.uOffset += scene.getEngine().getDeltaTime() * 0.0000012;
+  });
+  return mesh;
 }

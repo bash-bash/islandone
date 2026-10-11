@@ -105,3 +105,63 @@ export function createCausticTexture(scene: Scene, seed: number): DynamicTexture
     return [c, c, c, 255];
   });
 }
+
+/**
+ * Cumulus band for the sky: u runs once around the horizon (tiles in u), v goes
+ * from the horizon (0) up to about 45° (1). Puffy clouds sit low, thin out upwards,
+ * with bright tops and slightly blue-grey bases.
+ */
+export function createCloudTexture(scene: Scene): DynamicTexture {
+  const w = 1024;
+  const h = 256;
+  const width = 9; // noise periods around the horizon
+  const density = (u: number, v: number) => {
+    // Blend two offset samples so the texture repeats seamlessly in u.
+    const x = u * width;
+    const y = v * 3.2;
+    const a = fbm(x, y, 5, 41);
+    const b = fbm(x - width, y, 5, 41);
+    const n = a * (1 - u) + b * u;
+    const big = fbm(u * 3, 0.5, 2, 77) * (1 - u) + fbm(u * 3 - 3, 0.5, 2, 77) * u; // clusters vs gaps
+    const band = Math.max(0, 1 - Math.abs(v - 0.12) / 0.2) ** 0.6; // clouds sit low over the sea
+    return (n + big * 0.6 - 0.74) * 6 * band - (1 - band) * 0.5;
+  };
+  const tex = new DynamicTexture("clouds", { width: w, height: h }, scene, true);
+  const ctx = tex.getContext() as CanvasRenderingContext2D;
+  const img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    const v = 1 - y / h; // canvas rows run top-down
+    for (let x = 0; x < w; x++) {
+      const u = x / w;
+      const d = density(u, v);
+      const a = Math.min(1, Math.max(0, d)) ** 0.7;
+      // Lit from above: brighter where the cloud thins out above this texel.
+      const above = density(u, v + 0.04);
+      const lit = Math.min(1, Math.max(0, 0.55 + (d - above) * 1.2 + v * 0.4));
+      const i = (y * w + x) * 4;
+      img.data[i] = (0.66 + 0.34 * lit) * 255;
+      img.data[i + 1] = (0.74 + 0.26 * lit) * 255;
+      img.data[i + 2] = (0.86 + 0.14 * lit) * 255;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  tex.update(false);
+  tex.hasAlpha = true;
+  tex.wrapU = Texture.WRAP_ADDRESSMODE;
+  tex.wrapV = Texture.CLAMP_ADDRESSMODE;
+  return tex;
+}
+
+/** Tileable white foam: lacy patches with holes, alpha carries the pattern. */
+export function createFoamTexture(scene: Scene): DynamicTexture {
+  const tex = makeTexture("foam", scene, 256, (u, v) => {
+    const big = tileNoise(u, v, 2.2, 61, 4);
+    const fine = tileNoise(u, v, 6, 67, 3);
+    const n = big * 0.6 + fine * 0.4;
+    const a = Math.min(1, Math.max(0, (n - 0.4) / 0.16));
+    return [255, 255, 255, a * 255];
+  });
+  tex.hasAlpha = true;
+  return tex;
+}

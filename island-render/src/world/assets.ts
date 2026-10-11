@@ -11,6 +11,7 @@ import {
   type ShadowGenerator,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
+import { addWind, type WindSettings } from "./wind";
 
 /**
  * Runtime catalogue of the Blender GLBs used by the beach test.
@@ -21,26 +22,31 @@ export interface AssetDef {
   url: string;
   lod: number[];
   castShadow: boolean;
+  wind?: WindSettings;
 }
+
+const PALM_WIND: WindSettings = { height: 6.6, sway: 0.2, flutter: 0.045, speed: 0.9 };
+const BUSH_WIND: WindSettings = { height: 1.2, sway: 0.05, flutter: 0.025, speed: 1.4 };
+const GRASS_WIND: WindSettings = { height: 0.45, sway: 0.06, flutter: 0.015, speed: 1.8 };
 
 const BASE = import.meta.env.BASE_URL + "assets/";
 
 export const ASSETS = {
   IO_Hut_A_Full: { url: "hut/glb/IO_Hut_A_Full.glb", lod: [400], castShadow: true },
-  IO_Palm_A: { url: "palm/IO_Palm_A.glb", lod: [25, 50, 90, 400], castShadow: true },
-  IO_Palm_B: { url: "palm/IO_Palm_B.glb", lod: [25, 50, 90, 400], castShadow: true },
-  IO_Palm_Young_A: { url: "palm/IO_Palm_Young_A.glb", lod: [20, 40, 70, 150], castShadow: true },
+  IO_Palm_A: { url: "palm/IO_Palm_A.glb", lod: [25, 50, 90, 400], castShadow: true, wind: PALM_WIND },
+  IO_Palm_B: { url: "palm/IO_Palm_B.glb", lod: [25, 50, 90, 400], castShadow: true, wind: PALM_WIND },
+  IO_Palm_Young_A: { url: "palm/IO_Palm_Young_A.glb", lod: [20, 40, 70, 150], castShadow: true, wind: { height: 3, sway: 0.12, flutter: 0.035, speed: 1.1 } },
   IO_Rock_Large_A: { url: "rock/glb/IO_Rock_Large_A.glb", lod: [30, 70, 400], castShadow: true },
   IO_Rock_Large_B: { url: "rock/glb/IO_Rock_Large_B.glb", lod: [30, 70, 400], castShadow: true },
   IO_Stone_Small_A: { url: "stone/IO_Stone_Small_A.glb", lod: [12, 25, 45], castShadow: false },
   IO_Campfire_Stone_A: { url: "campfire_stone/IO_Campfire_Stone_A.glb", lod: [12, 25, 70], castShadow: true },
-  IO_Bush_Tropical_A: { url: "bush/IO_Bush_Tropical_A.glb", lod: [15, 35, 70, 120], castShadow: true },
-  IO_Bush_Tropical_B: { url: "bush/IO_Bush_Tropical_B.glb", lod: [15, 35, 70, 120], castShadow: true },
-  IO_Bush_Tropical_C: { url: "bush/IO_Bush_Tropical_C.glb", lod: [15, 35, 70, 120], castShadow: true },
-  IO_Fern_A: { url: "fern/IO_Fern_A.glb", lod: [15, 30, 60, 100], castShadow: false },
-  IO_Grass_Clump_A: { url: "grass/IO_Grass_Clump_A.glb", lod: [12, 25, 45, 70], castShadow: false },
-  IO_Grass_Clump_B: { url: "grass/IO_Grass_Clump_B.glb", lod: [12, 25, 45, 70], castShadow: false },
-  IO_Grass_Clump_C: { url: "grass/IO_Grass_Clump_C.glb", lod: [12, 25, 45, 70], castShadow: false },
+  IO_Bush_Tropical_A: { url: "bush/IO_Bush_Tropical_A.glb", lod: [15, 35, 70, 120], castShadow: true, wind: BUSH_WIND },
+  IO_Bush_Tropical_B: { url: "bush/IO_Bush_Tropical_B.glb", lod: [15, 35, 70, 120], castShadow: true, wind: BUSH_WIND },
+  IO_Bush_Tropical_C: { url: "bush/IO_Bush_Tropical_C.glb", lod: [15, 35, 70, 120], castShadow: true, wind: BUSH_WIND },
+  IO_Fern_A: { url: "fern/IO_Fern_A.glb", lod: [15, 30, 60, 100], castShadow: false, wind: { height: 0.7, sway: 0.05, flutter: 0.02, speed: 1.5 } },
+  IO_Grass_Clump_A: { url: "grass/IO_Grass_Clump_A.glb", lod: [12, 25, 45, 70], castShadow: false, wind: GRASS_WIND },
+  IO_Grass_Clump_B: { url: "grass/IO_Grass_Clump_B.glb", lod: [12, 25, 45, 70], castShadow: false, wind: GRASS_WIND },
+  IO_Grass_Clump_C: { url: "grass/IO_Grass_Clump_C.glb", lod: [12, 25, 45, 70], castShadow: false, wind: GRASS_WIND },
   IO_Log_Long_A: { url: "log/IO_Log_Long_A.glb", lod: [20, 45, 90], castShadow: true },
   IO_Log_Short_A: { url: "log/IO_Log_Short_A.glb", lod: [20, 45, 90], castShadow: true },
   IO_Plank_Long_A: { url: "plank/IO_Plank_Long_A.glb", lod: [20, 45, 90], castShadow: true },
@@ -107,6 +113,9 @@ export class AssetLibrary {
       this.stats.total++;
       this.onProgress?.(this.stats);
       p = LoadAssetContainerAsync(BASE + ASSETS[id].url, this.scene).then((c) => {
+        // Instances share the container's materials, so the wind plugin goes on once here.
+        const wind = (ASSETS[id] as AssetDef).wind;
+        if (wind) for (const m of c.materials) addWind(m, wind);
         this.stats.loaded++;
         this.onProgress?.(this.stats);
         return c;
