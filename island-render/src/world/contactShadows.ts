@@ -50,7 +50,7 @@ export function createContactShadows(scene: Scene, candidates: AbstractMesh[]): 
 
   for (const mesh of candidates) {
     const trunk = /Palm/.test(mesh.name);
-    const box = mesh.getBoundingInfo().boundingBox;
+    const box = mesh.getRawBoundingInfo().boundingBox;
     const world = mesh.computeWorldMatrix(true);
     const matrices =
       mesh instanceof Mesh && mesh.hasThinInstances

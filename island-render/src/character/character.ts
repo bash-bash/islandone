@@ -1,45 +1,38 @@
 import {
   LoadAssetContainerAsync,
-  PointerEventTypes,
   Scalar,
   TransformNode,
   Vector3,
-  type AbstractMesh,
   type AnimationGroup,
   type Scene,
   type ShadowGenerator,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
-import { terrainHeight } from "../world/terrain";
+import { moveWithCollision, type CollisionWorld } from "./collision";
 
 // IO_Character_A (assets/character/character.json): 1.75 m, Mixamo skeleton, faces +Z.
-// For the render test it wanders between camp spots on its own and idles in between;
-// clicking the sand sends it somewhere. No collision or path finding yet: it walks straight
-// lines. The real behaviour will come from island-sim.
+// Driven by the player (playerControl.ts): a move direction from the keyboard, or a point to
+// walk to from a click. Walks straight, slides along obstacles (collision.ts); no path finding.
 
 const URL = import.meta.env.BASE_URL + "assets/character/IO_Character_A.glb";
 const WALK_SPEED = 1.25; // m/s, matches the in-place Walk clip at this scale
-const TURN_SPEED = 6; // rad/s
-const BLEND_SPEED = 4; // weight per second
-
-/** Places it likes to go to: campfire, woodpile, workbench, shoreline, middle of camp. */
-const SPOTS: [number, number][] = [
-  [-2.6, -1.6],
-  [1.0, -2.9],
-  [-1.5, 4.4],
-  [3.4, 1.5],
-  [-1.4, -0.6],
-];
+const RUN_FACTOR = 2; // no Run clip yet: the Walk clip plays faster
+const TURN_SPEED = 8; // rad/s
+const BLEND_SPEED = 5; // weight per second
 
 export interface Character {
   root: TransformNode;
+  /** Keyboard input: world-space direction on the ground (length 0…1), or null to stop. */
+  drive(direction: Vector3 | null, run: boolean): void;
+  /** Click input: walk to a point; cancelled by keyboard input. */
+  goTo(point: Vector3): void;
+  setCollision(world: CollisionWorld): void;
   update(dt: number): void;
 }
 
 export async function createCharacter(
   scene: Scene,
   shadows: ShadowGenerator,
-  isGround: (mesh: AbstractMesh) => boolean,
   start: Vector3,
 ): Promise<Character> {
   const container = await LoadAssetContainerAsync(URL, scene);
@@ -77,44 +70,60 @@ export async function createCharacter(
   }
 
   let target: Vector3 | null = null;
-  let idleFor = 1;
-  let spot = 0;
-
-  scene.onPointerObservable.add((info) => {
-    if (info.type !== PointerEventTypes.POINTERTAP || info.event.button !== 0) return;
-    const pick = scene.pick(scene.pointerX, scene.pointerY, isGround);
-    if (pick?.hit && pick.pickedPoint && terrainHeight(pick.pickedPoint.x, pick.pickedPoint.z) > 0.05) {
-      target = pick.pickedPoint.clone();
-    }
-  });
+  let input: Vector3 | null = null;
+  let running = false;
+  let world: CollisionWorld = { circles: [], boxes: [], decks: [] };
+  let stuckFor = 0;
 
   return {
     root,
+    drive(direction, run) {
+      input = direction && direction.lengthSquared() > 1e-4 ? direction : null;
+      running = run;
+      if (input) target = null;
+    },
+    goTo(point) {
+      target = point.clone();
+      stuckFor = 0;
+    },
+    setCollision(w) {
+      world = w;
+    },
     update(dt: number) {
-      let walking = false;
-      if (target) {
+      let move: Vector3 | null = null;
+      let speed = WALK_SPEED * (running ? RUN_FACTOR : 1);
+      if (input) {
+        move = input.clone();
+        speed *= Math.min(1, input.length());
+      } else if (target) {
         const to = target.subtract(root.position);
         to.y = 0;
         const dist = to.length();
-        if (dist < 0.08) {
-          target = null;
-          idleFor = 3 + Math.random() * 4;
-        } else {
-          walking = true;
-          const heading = Math.atan2(to.x, to.z);
-          let diff = heading - root.rotation.y;
-          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-          root.rotation.y += Scalar.Clamp(diff, -TURN_SPEED * dt, TURN_SPEED * dt);
-          // Slow down while turning sharply so it doesn't moonwalk around corners.
-          const step = Math.min(dist, WALK_SPEED * dt * Math.max(0.2, Math.cos(diff)));
-          root.position.addInPlace(to.normalize().scale(step));
+        if (dist < 0.1 || stuckFor > 0.6) target = null;
+        else {
+          move = to;
+          speed = Math.min(speed, dist / Math.max(dt, 1e-3));
         }
-      } else if ((idleFor -= dt) <= 0) {
-        spot = (spot + 1 + Math.floor(Math.random() * (SPOTS.length - 1))) % SPOTS.length;
-        const [x, z] = SPOTS[spot];
-        target = new Vector3(x, 0, z);
       }
-      root.position.y = terrainHeight(root.position.x, root.position.z);
+
+      let walking = false;
+      if (move) {
+        walking = true;
+        const heading = Math.atan2(move.x, move.z);
+        let diff = heading - root.rotation.y;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        root.rotation.y += Scalar.Clamp(diff, -TURN_SPEED * dt, TURN_SPEED * dt);
+        // Slow down while turning sharply so it doesn't moonwalk around corners.
+        const step = speed * dt * Math.max(0.2, Math.cos(diff));
+        const dir = move.normalize();
+        const next = moveWithCollision(world, root.position, dir.x * step, dir.z * step);
+        const moved = Math.hypot(next.x - root.position.x, next.z - root.position.z);
+        stuckFor = moved < step * 0.25 ? stuckFor + dt : 0;
+        root.position.copyFrom(next);
+      } else {
+        root.position.copyFrom(moveWithCollision(world, root.position, 0, 0));
+      }
+      walk.speedRatio = running && walking ? RUN_FACTOR : 1;
 
       // Cross-fade between Idle and Walk.
       for (const g of loops) {

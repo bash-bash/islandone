@@ -1,4 +1,5 @@
 import { Color3, Vector3, type Scene } from "@babylonjs/core";
+import type { CollisionWorld } from "../character/collision";
 import type { AssetId, AssetLibrary, Placement } from "./assets";
 import { buildCampfire, buildDock, logPile } from "./camp";
 import { rng } from "./noise";
@@ -329,6 +330,13 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene) {
   );
 
   await Promise.all(jobs);
+
+  // Collision extras the scene can't derive from asset proxies: the fire and the pier deck.
+  const collision: Partial<CollisionWorld> = {
+    circles: [{ x: -3.5, z: -2.5, r: 0.95 }],
+    decks: [{ rect: { x0: 2.1, z0: -7.5, x1: 11.3, z1: -5.5 }, y: 0.83 }],
+  };
+  return collision;
 }
 
 /**

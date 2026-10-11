@@ -38,7 +38,7 @@ export function Hud() {
       {s.error && <div className="hud-panel hud-error">Fehler: {s.error}</div>}
 
       <div className="hud-panel hud-help">
-        Klick auf Sand: Charakter laufen lassen · Linke Maustaste: drehen · Rechte Maustaste: verschieben · Mausrad: zoomen
+        WASD oder Pfeiltasten: laufen (Shift: rennen) · Klick auf Sand: hinlaufen · Linke Maustaste: drehen · Rechte Maustaste: verschieben · Mausrad: zoomen
       </div>
     </>
   );
