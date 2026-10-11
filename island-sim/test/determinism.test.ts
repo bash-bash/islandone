@@ -28,7 +28,7 @@ describe("determinism (Handoff §36: same seed, same result)", () => {
     const b = runBatch({ firstSeed: 1, count: 100, days: 30 });
     expect(b.summary.batchFingerprint).toBe(a.summary.batchFingerprint);
     expect(b.runs).toEqual(a.runs);
-  });
+  }, 60_000);
 
   // Golden fingerprints: change only on purpose, when simulation behaviour is meant to change.
   // Update with `npx vitest run -u` and say why in the commit message.

@@ -1,3 +1,4 @@
+import { TICKS_PER_DAY } from "../core/time";
 import type { SimResult } from "../sim";
 import { WEATHER_KINDS, type WeatherKind } from "../world/weather";
 
@@ -10,30 +11,84 @@ export interface RunMetrics {
   days: number;
   fingerprint: string;
   eventCount: number;
+  /** 1 if alive at the end, else 0. */
+  survived: number;
+  /** Days lived (fractional). */
+  survivalDays: number;
+  deathCause: string | null;
+  minHealth: number;
+  /** Awake ticks without any goal / all awake ticks. */
   idleRate: number;
+  /** Share of all ticks per purpose. */
+  timeShare: Record<string, number>;
+  placesVisited: number;
+  /** Hours until the first drink of fresh water; null if never. */
+  hoursToFreshWater: number | null;
+  seawaterDrinks: number;
+  redBerryMeals: number;
+  foodAttempts: number;
+  foodSuccesses: number;
   weatherDays: Record<WeatherKind, number>;
 }
 
-export const PENDING_METRICS = [
-  "survival",
-  "hypotheses",
-  "capabilityGaps",
-  "strategyChanges",
-  "learningEvents",
-] as const;
+export const PENDING_METRICS = ["hypotheses", "capabilityGaps", "strategyChanges", "learningEvents"] as const;
+
+const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle"] as const;
 
 export function computeMetrics(result: SimResult): RunMetrics {
   const weatherDays = Object.fromEntries(WEATHER_KINDS.map((k) => [k, 0])) as Record<WeatherKind, number>;
+  const visited = new Set<string>(["p1"]);
+  let hoursToFreshWater: number | null = null;
+  let seawaterDrinks = 0;
+  let redBerryMeals = 0;
+  let foodAttempts = 0;
+  let foodSuccesses = 0;
+
   for (const e of result.log.all()) {
-    if (e.type === "weather.day") weatherDays[e.data!.weather as WeatherKind]++;
+    const d = e.data ?? {};
+    if (e.type === "weather.day") weatherDays[d.weather as WeatherKind]++;
+    if (e.type !== "action.end") continue;
+    if (d.kind === "move" && d.success) visited.add(d.place as string);
+    if (d.kind === "drink" && d.success) {
+      if (d.thingKind === "spring" && hoursToFreshWater === null) hoursToFreshWater = round(e.tick / 60, 1);
+      if (d.thingKind === "sea") seawaterDrinks++;
+    }
+    if (d.kind === "eat") {
+      foodAttempts++;
+      if (d.success) foodSuccesses++;
+      if (d.success && d.thingKind === "red_berry_bush") redBerryMeals++;
+    }
   }
-  const idle = result.actionTicks.idle ?? 0;
+
+  const ticks = result.ticks;
+  const sleep = result.purposeTicks.sleep ?? 0;
+  const awake = Math.max(1, ticks - sleep);
+  const timeShare: Record<string, number> = {};
+  for (const p of PURPOSES) timeShare[p] = round((result.purposeTicks[p] ?? 0) / Math.max(1, ticks), 4);
+  const death = result.world.death;
+
   return {
     seed: result.seed,
     days: result.days,
     fingerprint: result.fingerprint,
     eventCount: result.eventCount,
-    idleRate: idle / result.ticks,
+    survived: death ? 0 : 1,
+    survivalDays: round((death ? death.tick : ticks) / TICKS_PER_DAY, 2),
+    deathCause: death?.cause ?? null,
+    minHealth: round(result.minHealth, 1),
+    idleRate: round((result.purposeTicks.idle ?? 0) / awake, 4),
+    timeShare,
+    placesVisited: visited.size,
+    hoursToFreshWater,
+    seawaterDrinks,
+    redBerryMeals,
+    foodAttempts,
+    foodSuccesses,
     weatherDays,
   };
+}
+
+function round(v: number, digits: number): number {
+  const f = 10 ** digits;
+  return Math.round(v * f) / f;
 }
