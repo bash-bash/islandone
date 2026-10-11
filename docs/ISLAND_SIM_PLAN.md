@@ -25,17 +25,17 @@ Dazu §26 (Mindestumfang): deterministische Tick-Schleife, Seed-Zufall, Bedürfn
 
 ## 3. Entscheidungen, die vor dem Code fallen müssen
 
-Mit Vorschlag. Fett = braucht Chris’ Wort, der Rest ist technischer Standard.
+Mit Vorschlag. Die fett markierten Punkte hat Chris am 11.10.2026 entschieden (✅); der Rest ist technischer Standard.
 
 | # | Frage | Vorschlag |
 |---|---|---|
 | 1 | Sprache / Ort | TypeScript, eigener Ordner `island-sim/` neben `island-render/`, Node-CLI, Tests mit Vitest. Gleiche Sprache wie der Renderer, damit Typen bei der Zusammenführung geteilt werden können und die Sim später auch im Browser oder Worker laufen kann. |
-| 2 | **Inhaltsumfang der Welt v0** | Klein und kausal: Süßwasserquelle, Kokosnüsse/Früchte, Fische im Flachwasser, Treibholz, Äste, Palmfaser, Steine (rund, flach, scharfkantig). Latent (§8), unentdeckt am Start: z. B. Harz, Ton, Salz, eine giftige Pflanze. Keine Tiere außer einer Fischpopulation (§12, §32). |
-| 3 | **Problemketten v0** | 2–3 offene Probleme, an denen Lernen messbar wird, ohne festes Ziel: (a) Nahrung sichern (Fische schwer zu fangen → Werkzeug/Methode), (b) Schutz vor Regen/Sturm (Unterstand aus Teilen), (c) optional: Wasser überqueren (schwimmt Holz? rollt ein einzelner Stamm?). Kein Floß-Rezept, nur Teile, Eigenschaften und Verbindungen (§13). |
+| 2 | **Inhaltsumfang der Welt v0** | ✅ Entschieden: wie vorgeschlagen. Klein und kausal: Süßwasserquelle, Kokosnüsse/Früchte, Fische im Flachwasser, Treibholz, Äste, Palmfaser, Steine (rund, flach, scharfkantig). Latent (§8), unentdeckt am Start: z. B. Harz, Ton, Salz, eine giftige Pflanze. Keine Tiere außer einer Fischpopulation (§12, §32). |
+| 3 | **Problemketten v0** | ✅ Entschieden: zwei Ketten. (a) Nahrung sichern (Fische schwer zu fangen → Werkzeug/Methode), (b) Schutz vor Regen/Sturm (Unterstand aus Teilen). Wasser überqueren kommt erst nach v0. Kein festes Rezept, nur Teile, Eigenschaften und Verbindungen (§13). |
 | 4 | Raum | Kein Physikraster. Die Insel als kleiner Graph von Orten (Strand, Camp, Quelle, Waldrand, Felsen, Flachwasser, …) mit Wegzeiten und Ressourcenbeständen. Ortsnamen so wählen, dass sie später auf Punkte im 30-m-Strandtest abbildbar sind. |
 | 5 | Zeit | 1 Tick = 1 virtuelle Minute → 43 200 Ticks pro Lauf, 4,3 Mio. für §36. Aktionen dauern mehrere Ticks. Nacht und Schlaf als Teil der Bedürfnisse, kein Lichtmodell. |
 | 6 | **Denken ohne LLM** | Siehe Abschnitt 4. Die Hypothesen-Erzeugung ist eine austauschbare Schnittstelle, damit später ein LLM sie übernehmen kann (§27). |
-| 7 | **Erfolgsziel neben §36** | §36 misst nur, ob Kennzahlen reproduzierbar entstehen. Vorschlag zusätzlich: über 100 Seeds sollen die Läufe sichtbar *verschieden* verlaufen (Streuung bei Strategiewechseln und Entdeckungszeitpunkten), sonst ist es ein verkapptes Skript (§37). |
+| 7 | **Erfolgsziel neben §36** | ✅ Entschieden: gehört zur Abnahme. §36 misst nur, ob Kennzahlen reproduzierbar entstehen. Vorschlag zusätzlich: über 100 Seeds sollen die Läufe sichtbar *verschieden* verlaufen (Streuung bei Strategiewechseln und Entdeckungszeitpunkten), sonst ist es ein verkapptes Skript (§37). |
 
 ## 4. Kernproblem: Erkenntnis ohne LLM und ohne Tech-Tree
 
@@ -105,7 +105,7 @@ Ausgabe pro Seed als JSON, dazu eine Zusammenfassung über alle Seeds (Mittelwer
 3. **Wahrnehmung und Wissen:** `perceive()`, Beobachtungen, Überzeugungen mit Konfidenz, Erinnerungen, Architektur-Test für die Erkenntnisschranke.
 4. **Probleme, Hypothesen, Experimente:** Hypothesen-Generator, Experimente mit von der Welt berechneten Ergebnissen, einfache Teile-und-Verbindungen-Konstruktionen (§13).
 5. **Fatigue, Gaps, Satisficing, Lernereignisse.**
-6. **Auswertung:** alle Kennzahlen, Lauf über 100 Seeds, Bericht. Abnahme nach §36.
+6. **Auswertung:** alle Kennzahlen, Lauf über 100 Seeds, Bericht. Abnahme nach §36 plus Vielfalt: die Seeds müssen bei Strategiewechseln und Entdeckungszeitpunkten messbar streuen.
 7. Danach erst: Zusammenführung mit island-render (Ereignisstrom → `goTo` und HUD-Werte, die dort schon als Platzhalter vorgesehen sind).
 
 ## 10. Bewusst nicht in v0 (§32)
