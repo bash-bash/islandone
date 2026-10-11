@@ -27,10 +27,10 @@ import { GLSL_FRAGMENT, GLSL_VERTEX, WATER_SAMPLERS, WATER_UNIFORMS, WGSL_FRAGME
 // Colours are linear (the post-process pipeline works in linear space).
 
 export const WATER_LOOK = {
-  shallowColor: new Color3(0.0, 0.3, 0.58), // in-scattered light in shallow water
-  deepColor: new Color3(0.0, 0.11, 0.28), // asymptotic colour of deep water
-  absorb: new Vector3(1.7, 0.78, 0.42), // per metre: red goes first, the water turns cyan
-  scatter: 0.8,
+  shallowColor: new Color3(0.0, 0.33, 0.5), // in-scattered light in shallow water
+  deepColor: new Color3(0.0, 0.12, 0.22), // asymptotic colour of deep water
+  absorb: new Vector3(3.2, 0.9, 0.7), // per metre: red goes first, the water turns turquoise even when shallow
+  scatter: 0.55,
   waveStrength: 0.55,
 };
 

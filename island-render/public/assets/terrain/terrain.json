@@ -48,7 +48,7 @@
   "assets": {
     "IO_Terrain_Beach_Test_30m": {
       "file": "IO_Terrain_Beach_Test_30m.glb",
-      "glb_kb": 1238,
+      "glb_kb": 1237,
       "extent_x_m": [
         -24.0,
         6.0
@@ -86,7 +86,7 @@
     },
     "IO_Terrain_Surround_Test": {
       "file": "IO_Terrain_Surround_Test.glb",
-      "glb_kb": 910,
+      "glb_kb": 909,
       "extent_x_m": [
         -48.0,
         66.0

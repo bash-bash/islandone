@@ -126,7 +126,7 @@ export async function buildCampfire(lib: AssetLibrary, scene: Scene, cx: number,
  * Runs from the beach (startX) out to sea along +X at the given z.
  */
 export async function buildDock(lib: AssetLibrary, startX: number, length: number, z: number) {
-  const deckY = 0.8;
+  const deckY = 0.5; // low over the water, like the reference
   const halfWidth = 1.15;
   const pitch = 0.27; // plank width 0.25 m + gap
 
@@ -147,7 +147,7 @@ export async function buildDock(lib: AssetLibrary, startX: number, length: numbe
   }
 
   const posts: Placement[] = [];
-  const postHeight = 5.5; // reaches the floor of the deeper water along the pier (~-3.8 m)
+  const postHeight = 3; // down to the sandy shelf under the pier (~-1.7 m)
   for (let x = startX + 0.2; x <= startX + length + 0.01; x += (length - 0.4) / 3) {
     for (const side of [-1, 1]) {
       const top = deckY + 0.35 + (side > 0 ? 0.05 : 0);

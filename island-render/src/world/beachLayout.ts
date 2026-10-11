@@ -190,6 +190,16 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene) {
   place("IO_Rock_Large_A", { position: at(-3.5, -13), rotationY: 5.2, scale: 1.1 });
   place("IO_Rock_Large_B", { position: at(13, -13, -0.4), rotationY: 3.3, scale: 1.0 });
   place("IO_Rock_Large_A", { position: at(15.5, 3, -0.5), rotationY: 0.2, scale: 0.9 });
+  // Dark rocks just under the surface around the pier, as in the reference (top ~0.45 m below water).
+  const sunken: [AssetId, number, number, number, number][] = [
+    ["IO_Rock_Large_A", 6.8, -9.6, 0.5, 0.75],
+    ["IO_Rock_Large_B", 9.6, -3.9, 2.4, 0.7],
+    ["IO_Rock_Large_A", 12.2, -9.2, 4.2, 0.85],
+    ["IO_Rock_Large_B", 13.5, -4.6, 1.1, 0.6],
+  ];
+  sunken.forEach(([id, x, z, yaw, s], i) =>
+    place(id, { position: new Vector3(x, -0.45 - 2.2 * s, z), rotationY: yaw, scale: s }, `SunkenRock#${i}`),
+  );
   // Seagull on the big rock at the waterline (rock B at 1.2 × 2.08 m).
   place("IO_Seagull_A", { position: at(7.2, 12.5, 2.2), rotationY: -2.3 });
 
@@ -334,7 +344,7 @@ export async function buildBeach(lib: AssetLibrary, scene: Scene) {
   // Collision extras the scene can't derive from asset proxies: the fire and the pier deck.
   const collision: Partial<CollisionWorld> = {
     circles: [{ x: -3.5, z: -2.5, r: 0.95 }],
-    decks: [{ rect: { x0: 2.1, z0: -7.5, x1: 11.3, z1: -5.5 }, y: 0.83 }],
+    decks: [{ rect: { x0: 2.1, z0: -7.5, x1: 11.3, z1: -5.5 }, y: 0.53 }],
   };
   return collision;
 }
