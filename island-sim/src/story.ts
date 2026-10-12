@@ -38,8 +38,9 @@ async function main(): Promise<number> {
   const days = Number(values.days);
   const recording = join("recordings", `seed-${seed}.jsonl`);
   let thinker: Thinker;
+  const llm = values.thinker === "llm" ? new LlmThinker() : null;
   if (values.thinker === "curious") thinker = new CuriousThinker();
-  else if (values.thinker === "llm") thinker = new RecordedThinker(recording, new LlmThinker());
+  else if (llm) thinker = new RecordedThinker(recording, llm);
   else if (values.thinker === "replay") thinker = new RecordedThinker(recording, null);
   else throw new Error(`unknown thinker "${values.thinker}"`);
 
@@ -63,6 +64,7 @@ async function main(): Promise<number> {
   mkdirSync(values.out, { recursive: true });
   const file = join(values.out, `story-${seed}.md`);
   writeFileSync(file, lines.join("\n") + "\n");
+  if (llm) process.stdout.write(`Tokens (${llm.usage.calls} Aufrufe): Eingabe ${llm.usage.input}, Ausgabe ${llm.usage.output}, Cache gelesen ${llm.usage.cacheRead}, Cache geschrieben ${llm.usage.cacheWrite}\n`);
   if (thinker instanceof RecordedThinker) process.stdout.write(`Gedanken aufgezeichnet: ${thinker.stats.recorded}, abgespielt: ${thinker.stats.replayed}\n`);
   process.stdout.write(`${file} geschrieben (Fingerabdruck ${result.fingerprint})\n`);
   return 0;

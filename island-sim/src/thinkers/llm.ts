@@ -76,6 +76,8 @@ export class LlmThinker implements Thinker {
   private readonly client: Anthropic;
   private readonly model: string;
   private readonly effort: NonNullable<LlmThinkerOptions["effort"]>;
+  /** Tokens summed over every call, to see what a run costs. */
+  readonly usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
   constructor(options: LlmThinkerOptions = {}) {
     this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-opus-5-5";
@@ -94,6 +96,11 @@ export class LlmThinker implements Thinker {
       system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: JSON.stringify(view) }],
     });
+    this.usage.calls += 1;
+    this.usage.input += response.usage.input_tokens;
+    this.usage.output += response.usage.output_tokens;
+    this.usage.cacheRead += response.usage.cache_read_input_tokens ?? 0;
+    this.usage.cacheWrite += response.usage.cache_creation_input_tokens ?? 0;
     if (response.stop_reason === "refusal" || !response.parsed_output) {
       return { text: "(Mir fällt gerade nichts ein.)", plan: [] };
     }
