@@ -83,7 +83,20 @@ Das Folgende sagst du nur, wenn du es selbst so siehst (sonst null, eine leere L
 
 Die Welt entscheidet, was passiert; du erfährst es danach. Niemand sagt dir, wozu etwas gut ist. Sei neugierig, probiere aus, zieh Schlüsse aus dem, was passiert ist, und verfolge, was dir wichtig erscheint. Wenn Durst oder Hunger sehr stark werden, kümmert sich der Körper von selbst darum.`;
 
+/** A spending limit shared by every LLM thinker of a batch: once reached, no more calls are made. */
+export class Budget {
+  spent = 0;
+  constructor(readonly limit: number) {}
+}
+
+export class BudgetExceeded extends Error {
+  constructor(budget: Budget) {
+    super(`Budget von ${budget.limit} $ erreicht (${budget.spent.toFixed(2)} $ ausgegeben): Claude wird nicht mehr gefragt`);
+  }
+}
+
 export interface LlmThinkerOptions {
+  budget?: Budget;
   model?: string;
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
   client?: Anthropic;
@@ -94,6 +107,7 @@ export class LlmThinker implements Thinker {
   private readonly client: Anthropic;
   readonly model: string;
   private readonly effort: NonNullable<LlmThinkerOptions["effort"]>;
+  private readonly budget?: Budget;
   /** Tokens summed over every call, to see what a run costs. */
   readonly usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -101,6 +115,7 @@ export class LlmThinker implements Thinker {
     this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-sonnet-5-5";
     this.effort = options.effort ?? (process.env.ISLAND_SIM_EFFORT as LlmThinkerOptions["effort"]) ?? "low";
     this.client = options.client ?? createClient();
+    this.budget = options.budget;
     this.name = `llm:${this.model}`;
   }
 
@@ -117,6 +132,7 @@ export class LlmThinker implements Thinker {
   }
 
   private async ask(view: MindView): Promise<Thought> {
+    if (this.budget && this.budget.spent >= this.budget.limit) throw new BudgetExceeded(this.budget);
     // Haiku has no server-side fallback for refusals; a refusal is answered below like an empty thought.
     const fallback = this.model.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
     const response = await this.client.beta.messages.parse({
@@ -132,6 +148,11 @@ export class LlmThinker implements Thinker {
     this.usage.output += response.usage.output_tokens;
     this.usage.cacheRead += response.usage.cache_read_input_tokens ?? 0;
     this.usage.cacheWrite += response.usage.cache_creation_input_tokens ?? 0;
+    if (this.budget) {
+      const u = response.usage;
+      this.budget.spent +=
+        costOf(this.model, { calls: 1, input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 }) ?? 0;
+    }
     if (response.stop_reason === "refusal" || !response.parsed_output) {
       return { text: "(Mir fällt gerade nichts ein.)", plan: [] };
     }
