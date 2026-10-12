@@ -4,7 +4,9 @@ import type { Body } from "../world/body";
 import type { Thing, ThingKind } from "../world/island";
 import type { Item } from "../world/items";
 import { structureCover, type Structure } from "../world/structures";
-import { isDark, structureAt, thingsAt, type WorldState } from "../world/world";
+import type { Fire } from "../world/fire";
+import { PIECE_SOURCES } from "../world/items";
+import { fireAt, isDark, structureAt, thingsAt, type WorldState } from "../world/world";
 
 /**
  * The only channel from the objective world to the character (Handoff §5).
@@ -62,6 +64,8 @@ export class Perception {
       const seen: { id: string; features: Features }[] = thingsAt(world, here).map((t) => ({ id: t.id, features: thingFeatures(t) }));
       const built = structureAt(world, here);
       if (built) seen.push({ id: built.id, features: structureFeatures(built, world.items) });
+      const fire = fireAt(world, here);
+      if (fire) seen.push({ id: fire.id, features: fireFeatures(fire) });
       for (const { id, features } of seen) {
         const key = JSON.stringify(features);
         if (arrived || this.lastThings.get(id) !== key) {
@@ -69,10 +73,21 @@ export class Perception {
           out.push({ tick, kind: "thing", thing: id, place: here, features });
         }
       }
+    } else {
+      // Fire changes by the minute (a glow lives only minutes): watch it closely.
+      const fire = fireAt(world, here);
+      if (fire) {
+        const features = fireFeatures(fire);
+        const key = JSON.stringify(features);
+        if (this.lastThings.get(fire.id) !== key) {
+          this.lastThings.set(fire.id, key);
+          out.push({ tick, kind: "thing", thing: fire.id, place: here, features });
+        }
+      }
     }
 
     const carried = world.character.carried;
-    const inventoryKey = carried.join(",");
+    const inventoryKey = carried.map((id) => `${id}:${moistureOf(world.items.get(id)!.wetness)}`).join(",");
     if (inventoryKey !== this.lastInventory) {
       this.lastInventory = inventoryKey;
       out.push({
@@ -143,6 +158,11 @@ function tipOf(sharpness: number): string {
 
 /** What a held piece looks and feels like. */
 export function itemFeatures(item: Item): Features {
+  const look = itemLook(item);
+  return item.material === "stone" ? look : { ...look, moisture: moistureOf(item.wetness) };
+}
+
+function itemLook(item: Item): Features {
   switch (item.material) {
     case "stone":
       return { looks: "stone", shape: item.shape ?? "round", weight: weightOf(item.mass), edge: tipOf(item.sharpness) };
@@ -161,6 +181,16 @@ export function itemFeatures(item: Item): Features {
         joint: (item.jointStrength ?? 0) > 0.55 ? "tight" : "loose",
       };
   }
+}
+
+function moistureOf(wetness: number): string {
+  return wetness < 0.25 ? "dry" : wetness < 0.6 ? "damp" : "wet";
+}
+
+function fireFeatures(fire: Fire): Features {
+  if (fire.state === "glow") return { looks: "glow", size: "tiny", smoke: "thin" };
+  if (fire.state === "flame") return { looks: "fire", flames: fire.fuel > 60 ? "high" : "low", heat: "warm on skin" };
+  return { looks: "ashes" };
 }
 
 function structureFeatures(structure: Structure, items: ReadonlyMap<string, Item>): Features {
@@ -186,6 +216,7 @@ function thingFeatures(thing: Thing): Features {
   if (thing.max >= 1e9) return base;
   const a = Math.floor(thing.amount);
   const amount = a <= 0 ? "none" : a <= 2 ? "few" : a <= 8 ? "some" : "many";
+  if (PIECE_SOURCES[thing.kind]) return { ...base, amount, moisture: moistureOf(thing.wetness ?? 0) };
   return { ...base, amount };
 }
 
@@ -215,14 +246,18 @@ const FAILURE: Record<string, string> = {
   failed: "did not work",
 };
 
+const RUB_FELT: Record<string, string> = { nothing: "nothing happened", warm: "got warm", smoke: "smoke rose", glow: "glowing dust" };
+const PUT_FELT: Record<string, string> = { "flared up": "flared up", burns: "it burns", "went out": "went out", nothing: "nothing happened" };
+
 function felt(action: Action, r: ActionResult): Features {
+  if (r.put) return { result: PUT_FELT[r.put]! };
   if (!r.success) {
     const failed: Record<string, string> = { result: FAILURE[r.reason ?? "failed"] ?? "did not work" };
     if (r.toolBroke) failed.tool = "came apart";
     return failed;
   }
   const f: Record<string, string> = {};
-  if (r.thingKind && TASTE[r.thingKind]) f.taste = TASTE[r.thingKind]!;
+  if (r.thingKind && TASTE[r.thingKind]) f.taste = (r.cooked ? "roasted, " : "") + TASTE[r.thingKind]!;
   if (r.thirst !== undefined) f.thirst = r.thirst < -20 ? "eased" : r.thirst < 0 ? "a little eased" : "worse";
   if (r.hunger !== undefined) f.hunger = r.hunger <= -15 ? "eased" : "barely";
   if (action.kind === "move") f.result = "arrived";
@@ -230,6 +265,7 @@ function felt(action: Action, r: ActionResult): Features {
   if (action.kind === "bind") f.result = "tied";
   if (action.kind === "build") f.result = "added";
   if (action.kind === "tie") f.result = "tied";
+  if (r.rub) f.result = RUB_FELT[r.rub]!;
   if (r.toolBroke) f.tool = "came apart";
   return f;
 }

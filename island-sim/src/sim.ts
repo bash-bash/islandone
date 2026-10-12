@@ -2,6 +2,7 @@ import { EventLog } from "./core/eventLog";
 import { RngStreams, type Rng } from "./core/rng";
 import { TICKS_PER_DAY, timeOf } from "./core/time";
 import { RoutineMind } from "./mind/routineMind";
+import type { Thinker, ThinkRequest, Thought } from "./mind/thinking";
 import type { Action, Mind, Purpose } from "./mind/types";
 import { Perception } from "./perception/perceive";
 import { actionDuration, completeAction } from "./world/actions";
@@ -13,8 +14,14 @@ export interface SimOptions {
   days: number;
   /** Keep every event in memory (for inspection). The fingerprint is computed either way. */
   keepEvents?: boolean;
-  /** Replaces the character's mind (tests, later the LLM-backed mind). Default: RoutineMind. */
+  /** Replaces the character's mind (tests). Default: RoutineMind. */
   createMind?: (rng: Rng) => Mind;
+  /**
+   * Who does the thinking in free time (stage 5). Without one, the built-in
+   * rules of stage 4 run. With one, the character stops to think at moments
+   * worth thinking about and follows the plans it comes up with.
+   */
+  thinker?: Thinker;
 }
 
 export interface TickContext {
@@ -50,6 +57,26 @@ export interface SimResult {
  *   4. if the character is free, the mind picks the next action
  */
 export function runSimulation(options: SimOptions): SimResult {
+  const run = simulate(options);
+  let step = run.next();
+  while (!step.done) {
+    const thought = options.thinker!.think(step.value.view);
+    if (thought instanceof Promise) throw new Error(`thinker "${options.thinker!.name}" is asynchronous: use runSimulationAsync`);
+    step = run.next(thought);
+  }
+  return step.value;
+}
+
+/** Same as runSimulation, for thinkers that answer asynchronously (an LLM). */
+export async function runSimulationAsync(options: SimOptions): Promise<SimResult> {
+  const run = simulate(options);
+  let step = run.next();
+  while (!step.done) step = run.next(await options.thinker!.think(step.value.view));
+  return step.value;
+}
+
+/** The simulation as a generator: it pauses whenever the character wants to think. */
+export function* simulate(options: SimOptions): Generator<ThinkRequest, SimResult, Thought> {
   const { seed, days } = options;
   if (!Number.isInteger(seed) || seed < 0) throw new Error(`seed must be a non-negative integer, got ${seed}`);
   if (!Number.isInteger(days) || days < 1) throw new Error(`days must be a positive integer, got ${days}`);
@@ -57,7 +84,8 @@ export function runSimulation(options: SimOptions): SimResult {
   const rng = new RngStreams(seed);
   const log = new EventLog(options.keepEvents ?? false);
   const world = createWorld(rng.get("world-setup"));
-  const mind: Mind = (options.createMind ?? ((r) => new RoutineMind(r)))(rng.get("mind"));
+  const thinker = options.thinker;
+  const mind: Mind = (options.createMind ?? ((r) => new RoutineMind(r, thinker ? "external" : "rules")))(rng.get("mind"));
   const perception = new Perception();
   const purposeTicks: Record<string, number> = {};
   const total = days * TICKS_PER_DAY;
@@ -102,6 +130,12 @@ export function runSimulation(options: SimOptions): SimResult {
     logMindEvents(mind, log);
 
     if (!world.character.current) {
+      const request = thinker ? mind.wantsThought?.() : null;
+      if (request) {
+        const thought = yield request;
+        mind.receiveThought?.(thought, thinker!.name);
+        logMindEvents(mind, log);
+      }
       const action = mind.decide(tick);
       const minutes = actionDuration(world, action, hour);
       world.character.current = { action, startedAt: tick, endsAt: minutes === null ? null : tick + minutes };

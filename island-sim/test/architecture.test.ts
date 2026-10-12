@@ -29,6 +29,16 @@ describe("epistemic firewall (Handoff §5, §28, §36)", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it("thinkers (rules or LLM) never import the world or perception", () => {
+    const offenders: string[] = [];
+    for (const file of files(join(SRC, "thinkers"))) {
+      for (const spec of imports(file)) {
+        if (spec.includes("/world/") || spec.includes("/perception/")) offenders.push(`${relative(SRC, file)} -> ${spec}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe("determinism hygiene", () => {

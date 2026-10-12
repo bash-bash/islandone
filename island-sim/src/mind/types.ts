@@ -39,7 +39,7 @@ export type Observation =
   | { tick: number; kind: "outcome"; action: Action; success: boolean; minutes: number; felt: Features };
 
 /** Why the character does something. Used for analytics (idle rate, time shares). */
-export type Purpose = "drink" | "eat" | "sleep" | "shelter" | "explore" | "rest" | "idle" | "experiment" | "work";
+export type Purpose = "drink" | "eat" | "sleep" | "shelter" | "explore" | "rest" | "idle" | "experiment" | "work" | "plan";
 
 /** What the character attempts. The outcome is computed by the world. */
 export type Action =
@@ -48,8 +48,8 @@ export type Action =
   | { kind: "sleep"; purpose: Purpose }
   | { kind: "move"; to: string; purpose: Purpose }
   | { kind: "drink"; target: string; purpose: Purpose }
-  /** Eat from a source; with a tool, the held piece is used on it (strike, stab, pry). */
-  | { kind: "eat"; target: string; tool?: string; purpose: Purpose }
+  /** Eat from a source; with a tool, the held piece is used on it (strike, stab, pry); `over` holds it over something first. */
+  | { kind: "eat"; target: string; tool?: string; over?: string; purpose: Purpose }
   /** Pick up a piece from a source (stones, sticks, leaves, …). */
   | { kind: "take"; source: string; purpose: Purpose }
   | { kind: "drop"; item: string; purpose: Purpose }
@@ -58,7 +58,11 @@ export type Action =
   /** Put a held piece into what is built at the current place (starts something new if nothing is there); optionally tie it in. */
   | { kind: "build"; item: string; binder?: string; purpose: Purpose }
   /** Tie one loose part of what is built here with a held fiber strip. */
-  | { kind: "tie"; binder: string; purpose: Purpose };
+  | { kind: "tie"; binder: string; purpose: Purpose }
+  /** Rub one held piece hard against another for a while. */
+  | { kind: "rub"; item: string; against: string; purpose: Purpose }
+  /** Put a held piece onto something here (whatever it is: something built, something glowing, …). */
+  | { kind: "put"; item: string; onto: string; purpose: Purpose };
 
 /** Something that happened inside the mind (a belief formed, learning used). Logged for analytics only. */
 export interface MindEvent {
@@ -68,6 +72,12 @@ export interface MindEvent {
 }
 
 export interface Mind {
+  /**
+   * Asked whenever the character is free, before decide(): a request to think
+   * (see src/mind/thinking.ts). The simulation answers it with receiveThought().
+   */
+  wantsThought?(): import("./thinking").ThinkRequest | null;
+  receiveThought?(thought: import("./thinking").Thought, by: string): void;
   /** Receives everything perceived since the last call. */
   observe(observations: readonly Observation[]): void;
   /** Called whenever the character is free to act. */

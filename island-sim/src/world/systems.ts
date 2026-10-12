@@ -2,7 +2,9 @@ import { TICKS_PER_DAY, TICKS_PER_HOUR, timeOf } from "../core/time";
 import type { TickContext } from "../sim";
 import { tickBody, type DamageCause } from "./body";
 import { nextWeather } from "./weather";
-import { effectiveCover, isDark } from "./world";
+import { effectiveCover, fireAt, isDark } from "./world";
+import { burn } from "./fire";
+import { PIECE_SOURCES } from "./items";
 import { structureCover } from "./structures";
 import { isActive } from "./actions";
 
@@ -58,8 +60,64 @@ export const regrowSystem: WorldSystem = {
     if (ctx.tick % TICKS_PER_HOUR !== 0) return;
     for (const thing of ctx.world.things.values()) {
       if (thing.regrowPerHour > 0 && thing.amount < thing.max) {
-        thing.amount = Math.min(thing.max, thing.amount + thing.regrowPerHour);
+        const growth = thing.logistic
+          ? Math.max(0.005, thing.regrowPerHour * thing.amount * (1 - thing.amount / thing.max))
+          : thing.regrowPerHour;
+        thing.amount = Math.min(thing.max, thing.amount + growth);
       }
+    }
+  },
+};
+
+/** Hourly drying rate of exposed material by weather of the day. */
+const DRYING = { heat: 0.2, clear: 0.12, cloudy: 0.05, rain: 0.03, storm: 0.02 } as const;
+
+/**
+ * Rain soaks material lying in the open, sun and wind dry it again
+ * (Handoff §11: "Regen -> Material wird nass"). Carried pieces get wet with
+ * the character and dry a little faster (body heat).
+ */
+export const moistureSystem: WorldSystem = {
+  id: "moisture",
+  tick(ctx) {
+    const { world, tick } = ctx;
+    if (tick % TICKS_PER_HOUR !== 0) return;
+    const night = isDark(timeOf(tick).hour) ? 0.5 : 1;
+    const dry = DRYING[world.weather] * night;
+    for (const thing of world.things.values()) {
+      if (!PIECE_SOURCES[thing.kind]) continue;
+      const exposure = 1 - effectiveCover(world, thing.place);
+      const w = thing.wetness ?? 0;
+      thing.wetness = world.raining ? Math.min(1, w + 0.1 + 0.5 * exposure) : Math.max(0, w - dry * (0.4 + 0.6 * exposure));
+    }
+    const exposure = 1 - effectiveCover(world, world.character.place);
+    const nearFire = fireAt(world, world.character.place)?.state === "flame";
+    for (const id of world.character.carried) {
+      const item = world.items.get(id);
+      if (!item) continue;
+      if (world.raining && exposure > 0.15) item.wetness = Math.min(1, item.wetness + 0.4 * exposure);
+      else item.wetness = Math.max(0, item.wetness - (nearFire ? 0.5 : dry * 1.2 + 0.03));
+    }
+  },
+};
+
+/** Embers die, flames eat their fuel, rain puts them out. */
+export const fireSystem: WorldSystem = {
+  id: "fire",
+  tick(ctx) {
+    const { world, tick, log } = ctx;
+    if (world.fires.size === 0) return;
+    const rng = ctx.rng.get("fire");
+    for (const fire of world.fires.values()) {
+      if (fire.state === "ashes") continue;
+      const before = fire.state;
+      if (fire.state === "glow") {
+        fire.fuel -= 1;
+        if (fire.fuel <= 0) fire.state = "ashes";
+      } else {
+        burn(fire, world.raining, 1 - effectiveCover(world, fire.place), rng);
+      }
+      if (fire.state !== before) log.push({ tick, source: "world", type: "fire.out", data: { fire: fire.id, from: before } });
     }
   },
 };
@@ -85,6 +143,7 @@ export const bodySystem: WorldSystem = {
       dark: isDark(hour),
       cover,
       active: current ? isActive(world, current.action) : false,
+      nearFire: fireAt(world, place.id)?.state === "flame",
     });
     for (const [cause, amount] of Object.entries(damage) as [DamageCause, number][]) world.damage[cause] += amount;
     if (world.body.health <= 0) {
@@ -141,4 +200,4 @@ function round2(v: number): number {
   return Math.round(v * 100) / 100;
 }
 
-export const WORLD_SYSTEMS: readonly WorldSystem[] = [weatherSystem, regrowSystem, structureSystem, bodySystem];
+export const WORLD_SYSTEMS: readonly WorldSystem[] = [weatherSystem, regrowSystem, structureSystem, moistureSystem, fireSystem, bodySystem];

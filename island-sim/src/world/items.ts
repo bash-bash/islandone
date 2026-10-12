@@ -28,6 +28,8 @@ export interface Item {
   area: number;
   /** For fiber: how well it holds when tied (0..1). */
   tieStrength: number;
+  /** 0 dry … 1 soaked. Wet pieces are heavier to work with and do not burn. */
+  wetness: number;
   /** For bound pieces: the parts and how strong the joint is. */
   parts?: string[];
   jointStrength?: number;
@@ -43,8 +45,8 @@ export const PIECE_SOURCES: Partial<Record<ThingKind, true>> = {
 };
 
 /** Creates a new loose piece from a source. Variation is random per piece, so the character has to look at what it got. */
-export function spawnPiece(kind: ThingKind, id: string, rng: Rng): Item | null {
-  const base = { id, area: 0, tieStrength: 0 };
+export function spawnPiece(kind: ThingKind, id: string, rng: Rng, wetness = 0): Item | null {
+  const base = { id, area: 0, tieStrength: 0, wetness };
   switch (kind) {
     case "stones": {
       const shape = rng.weighted([
@@ -98,6 +100,7 @@ export function bindPieces(id: string, a: Item, b: Item, binder: Item, rng: Rng)
     hardness: Math.max(a.hardness, b.hardness),
     area: a.area + b.area,
     tieStrength: 0,
+    wetness: Math.max(a.wetness, b.wetness),
     parts: [a.id, b.id, binder.id],
     jointStrength: binder.tieStrength * rng.range(0.7, 1),
   };

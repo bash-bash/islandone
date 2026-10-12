@@ -43,6 +43,10 @@ export interface Thing {
   max: number;
   /** Amount regained per virtual hour. */
   regrowPerHour: number;
+  /** Logistic regrowth (a population: few left recover slowly). Default: linear. */
+  logistic?: boolean;
+  /** For sources of loose pieces: how wet they are, 0 dry … 1 soaked. */
+  wetness?: number;
 }
 
 export const PLACES: readonly Place[] = [
@@ -85,7 +89,8 @@ export const THING_SPECS: readonly ThingSpec[] = [
   { kind: "branches", place: "p3", max: 15, regrowPerHour: 0 },
   { kind: "shellfish", place: "p5", max: 10, regrowPerHour: 0.06 },
   { kind: "stones", place: "p5", max: 40, regrowPerHour: 0 },
-  { kind: "fish", place: "p6", max: 30, regrowPerHour: 0.2 },
+  // A population: heavy fishing thins it out and it recovers slowly (Handoff §12).
+  { kind: "fish", place: "p6", max: 30, regrowPerHour: 0.012, logistic: true },
   { kind: "driftwood", place: "p7", max: 20, regrowPerHour: 0 },
   { kind: "stones", place: "p7", max: 15, regrowPerHour: 0 },
 ];

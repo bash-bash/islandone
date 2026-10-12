@@ -2,6 +2,7 @@ import type { Rng } from "../core/rng";
 import type { Action } from "../mind/types";
 import { createBody, type Body, type DamageCause } from "./body";
 import { PATHS, PLACES, START_PLACE, THING_SPECS, type Place, type Thing } from "./island";
+import type { Fire } from "./fire";
 import type { Item } from "./items";
 import { structureCover, type Structure } from "./structures";
 import type { WeatherKind } from "./weather";
@@ -29,8 +30,10 @@ export interface WorldState {
   /** Every loose or bound piece that exists (carried, lying around, or part of a structure). */
   items: Map<string, Item>;
   structures: Map<string, Structure>;
-  /** Ids for new items ("i1", …) and structures ("s1", …). */
-  nextId: { item: number; structure: number };
+  /** Glowing dust, flames and ashes, at most one per place. */
+  fires: Map<string, Fire>;
+  /** Ids for new items ("i1", …), structures ("s1", …) and fires ("f1", …). */
+  nextId: { item: number; structure: number; fire: number };
 }
 
 /** The character can hold at most this many pieces. */
@@ -74,7 +77,8 @@ export function createWorld(rng: Rng): WorldState {
     delayedEffects: [],
     items: new Map(),
     structures: new Map(),
-    nextId: { item: 1, structure: 1 },
+    fires: new Map(),
+    nextId: { item: 1, structure: 1, fire: 1 },
   };
 }
 
@@ -90,6 +94,11 @@ export function thingsAt(world: WorldState, place: string): Thing[] {
 
 export function structureAt(world: WorldState, place: string): Structure | undefined {
   for (const s of world.structures.values()) if (s.place === place) return s;
+  return undefined;
+}
+
+export function fireAt(world: WorldState, place: string): Fire | undefined {
+  for (const f of world.fires.values()) if (f.place === place) return f;
   return undefined;
 }
 

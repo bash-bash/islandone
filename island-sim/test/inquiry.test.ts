@@ -28,6 +28,7 @@ const piece = (p: Partial<Item>): Item => ({
   hardness: 0,
   area: 0,
   tieStrength: 0,
+  wetness: 0,
   ...p,
 });
 

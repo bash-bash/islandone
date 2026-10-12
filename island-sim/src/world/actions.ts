@@ -2,8 +2,9 @@ import type { Rng } from "../core/rng";
 import type { Action } from "../mind/types";
 import type { ThingKind } from "./island";
 import { bindPieces, PIECE_SOURCES, spawnPiece, type Item } from "./items";
+import { feed, GLOW_MINUTES, rub } from "./fire";
 import { attemptChance, jointBreakChance } from "./tools";
-import { CARRY_LIMIT, isDark, structureAt, type WorldState } from "./world";
+import { CARRY_LIMIT, fireAt, isDark, structureAt, type WorldState } from "./world";
 
 /**
  * Resolves what the character's actions actually do. All outcomes are
@@ -26,6 +27,12 @@ export interface ActionResult {
   /** A bound tool came apart during use. */
   toolBroke?: boolean;
   structure?: string;
+  /** What rubbing produced. */
+  rub?: string;
+  /** What putting a piece onto something did. */
+  put?: string;
+  /** Food was held over a flame first. */
+  cooked?: boolean;
 }
 
 interface Consumption {
@@ -86,12 +93,16 @@ export function actionDuration(world: WorldState, action: Action, hour: number):
       return action.binder ? 15 : 8;
     case "tie":
       return 10;
+    case "rub":
+      return 20;
+    case "put":
+      return 2;
   }
 }
 
 /** Whether the action counts as physical effort (raises needs faster). */
 export function isActive(world: WorldState, action: Action): boolean {
-  if (action.kind === "move" || action.kind === "take" || action.kind === "build" || action.kind === "tie") return true;
+  if (["move", "take", "build", "tie", "rub"].includes(action.kind)) return true;
   if (action.kind === "eat" || action.kind === "drink") return consumption(world, action)?.active ?? false;
   return false;
 }
@@ -125,7 +136,48 @@ export function completeAction(world: WorldState, action: Action, rng: Rng, tick
       return build(world, action.item, action.binder);
     case "tie":
       return tieIn(world, action.binder);
+    case "rub":
+      return rubPieces(world, action.item, action.against, rng);
+    case "put":
+      return put(world, action.item, action.onto, rng);
   }
+}
+
+function rubPieces(world: WorldState, a: string, b: string, rng: Rng): ActionResult {
+  const carried = world.character.carried;
+  const ia = world.items.get(a);
+  const ib = world.items.get(b);
+  if (!ia || !ib || a === b || !carried.includes(a) || !carried.includes(b)) return { success: false, reason: "not_held" };
+  const result = rub(ia, ib, rng);
+  if (result === "glow") {
+    const place = world.character.place;
+    let fire = fireAt(world, place);
+    if (!fire) {
+      fire = { id: `f${world.nextId.fire++}`, place, state: "ashes", fuel: 0 };
+      world.fires.set(fire.id, fire);
+    }
+    if (fire.state !== "flame") {
+      fire.state = "glow";
+      fire.fuel = GLOW_MINUTES;
+    }
+  }
+  return { success: true, rub: result };
+}
+
+function put(world: WorldState, itemId: string, onto: string, rng: Rng): ActionResult {
+  const carried = world.character.carried;
+  const item = world.items.get(itemId);
+  if (!item || !carried.includes(itemId)) return { success: false, reason: "not_held" };
+  const place = world.character.place;
+  const fire = world.fires.get(onto);
+  if (fire && fire.place === place) {
+    const result = feed(fire, item, rng);
+    if (item.material !== "stone") world.character.carried = carried.filter((id) => id !== itemId);
+    return { success: result !== "nothing", put: result };
+  }
+  const structure = world.structures.get(onto);
+  if (structure && structure.place === place) return build(world, itemId, undefined);
+  return { success: false, reason: "not_here" };
 }
 
 function tieIn(world: WorldState, binderId: string): ActionResult {
@@ -154,6 +206,8 @@ function consume(world: WorldState, action: Extract<Action, { kind: "drink" | "e
     tool = world.items.get(action.tool) ?? null;
   }
   const chance = attemptChance(thing.kind, tool) ?? spec.chance;
+  const flame = action.kind === "eat" && action.over ? world.fires.get(action.over) : undefined;
+  const cooked = !!flame && flame.place === world.character.place && flame.state === "flame";
   let toolBroke = false;
   if (tool && rng.chance(jointBreakChance(tool))) {
     toolBroke = true;
@@ -163,7 +217,9 @@ function consume(world: WorldState, action: Extract<Action, { kind: "drink" | "e
 
   if (spec.consumes) thing.amount -= 1;
   body.thirst = clamp(body.thirst + (spec.thirst ?? 0));
-  body.hunger = clamp(body.hunger + (spec.hunger ?? 0));
+  // Cooked fish and shellfish fill more (Handoff §4: the world decides).
+  const hunger = (spec.hunger ?? 0) * (cooked && (thing.kind === "fish" || thing.kind === "shellfish") ? 1.4 : 1);
+  body.hunger = clamp(body.hunger + hunger);
   if (spec.sickness && spec.sicknessDelay) {
     world.delayedEffects.push({ tick: tick + spec.sicknessDelay, sickness: spec.sickness });
   } else {
@@ -174,8 +230,9 @@ function consume(world: WorldState, action: Extract<Action, { kind: "drink" | "e
     success: true,
     thingKind: thing.kind,
     thirst: spec.thirst,
-    hunger: spec.hunger,
+    hunger: spec.hunger === undefined ? undefined : hunger,
     sickness: spec.sickness,
+    cooked,
     health: spec.health,
     toolBroke,
   };
@@ -187,7 +244,7 @@ function take(world: WorldState, source: string, rng: Rng): ActionResult {
   if (!PIECE_SOURCES[thing.kind]) return { success: false, reason: "nothing_loose", thingKind: thing.kind };
   if (thing.amount < 1) return { success: false, reason: "none_left", thingKind: thing.kind };
   if (world.character.carried.length >= CARRY_LIMIT) return { success: false, reason: "hands_full", thingKind: thing.kind };
-  const item = spawnPiece(thing.kind, `i${world.nextId.item++}`, rng)!;
+  const item = spawnPiece(thing.kind, `i${world.nextId.item++}`, rng, thing.wetness ?? 0)!;
   thing.amount -= 1;
   world.items.set(item.id, item);
   world.character.carried.push(item.id);

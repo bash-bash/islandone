@@ -35,6 +35,8 @@ export const RATES = {
   /** Warmth lost per minute when soaked and fully exposed; scaled by wetness, exposure (1 − cover), wind, night and activity. */
   wetChillPerMin: 0.06,
   warmUpPerMin: 0.08,
+  nightChillPerMin: 0.08,
+  fireWarmthPerMin: 0.4,
   dryPerMin: 1 / 180,
   sicknessDecayPerMin: 0.04,
   healPerMin: 0.012,
@@ -59,6 +61,8 @@ export interface BodyEnvironment {
   /** Cover of the current place, 0..1. */
   cover: number;
   active: boolean;
+  /** A flame burns at the character's place: warms and dries. */
+  nearFire?: boolean;
 }
 
 /**
@@ -79,7 +83,7 @@ export function tickBody(body: Body, env: BodyEnvironment): Partial<Record<Damag
 
   const exposure = 1 - env.cover;
   if (env.raining && exposure > 0.15) body.wetness = Math.min(1, body.wetness + 0.05 * exposure);
-  else body.wetness = Math.max(0, body.wetness - RATES.dryPerMin * (env.hot ? 2 : 1) * (env.raining ? 0.5 : 1));
+  else body.wetness = Math.max(0, body.wetness - RATES.dryPerMin * (env.hot ? 2 : 1) * (env.raining ? 0.5 : 1) * (env.nearFire ? 6 : 1));
 
   // Tropical air: being wet only chills in wind or at night; moving keeps you warmer.
   const chill =
@@ -89,7 +93,10 @@ export function tickBody(body: Body, env: BodyEnvironment): Partial<Record<Damag
     (env.windy ? 2 : 1) *
     (env.dark ? 1.5 : env.windy ? 0.6 : 0) *
     (env.active ? 0.5 : 1);
-  body.warmth = clamp(body.warmth + RATES.warmUpPerMin * (1 - body.wetness * 0.7) - chill);
+  // Nights are cool in the open, a little less under cover; a fire warms.
+  const nightChill = env.dark ? RATES.nightChillPerMin * (0.3 + 0.7 * exposure) : 0;
+  const warmUp = RATES.warmUpPerMin * (1 - body.wetness * 0.7) + (env.nearFire ? RATES.fireWarmthPerMin : 0);
+  body.warmth = clamp(body.warmth + warmUp - chill - nightChill);
 
   body.sickness = clamp(body.sickness - RATES.sicknessDecayPerMin);
 

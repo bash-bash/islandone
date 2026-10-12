@@ -4,7 +4,17 @@ import { categoryOf } from "./categories";
 import { Inquiry, type InquiryHost } from "./inquiry";
 import { toolClass } from "./intuition";
 import { EpisodicMemory } from "./memory";
+import { describeStep, type MindView, type PlanStep, type ThinkReason, type ThinkRequest, type Thought } from "./thinking";
 import type { Action, Features, Feelings, Mind, MindEvent, Observation, Purpose } from "./types";
+
+/** How the character's free time is spent: built-in rules (stage 4) or an external Thinker (stage 5). */
+export type ThinkingMode = "rules" | "external";
+
+/** Minimum minutes between unprompted thoughts, and a daily cap (keeps an LLM affordable). */
+const THINK_GAP = 30;
+const THINKS_PER_DAY = 60;
+const RECENT = 24;
+const DISCOVERIES = 40;
 
 type Use = "drink" | "eat";
 
@@ -30,6 +40,11 @@ type Use = "drink" | "eat";
  * Problems, hypotheses and experiments live in src/mind/inquiry.ts (stage 4):
  * the character works on them in its free time, and what turns out to work
  * (a tool for a food source, a roof at its sleeping spot) is used from then on.
+ *
+ * Stage 5, mode "external": free time belongs to a Thinker (src/mind/thinking.ts,
+ * an LLM or a stand-in). The mind asks to think when something new happened or a
+ * plan ended or failed, hands over its own view, and follows the plan it gets
+ * back step by step. The body's instincts still step in when a need hurts.
  */
 export class RoutineMind implements Mind {
   private here: string | null = null;
@@ -50,8 +65,23 @@ export class RoutineMind implements Mind {
   private pendingTake: string | null = null;
   private lastPurpose: Purpose = "idle";
   private readonly inquiry: Inquiry;
+  // --- thinking (stage 5) ---
+  private plan: { goal?: string; steps: PlanStep[]; done: number } | null = null;
+  private planStepPending = false;
+  private thinkReason: ThinkReason | null = null;
+  private thinkTrigger: string | undefined;
+  private lastThink = -Infinity;
+  private thinksToday = { day: -1, count: 0 };
+  private wasAsleep = true;
+  private readonly recent: string[] = [];
+  private readonly discoveries: string[] = [];
+  private readonly seenResults = new Set<string>();
+  private readonly thoughts: { text: string; goal?: string }[] = [];
 
-  constructor(private readonly rng: Rng) {
+  constructor(
+    private readonly rng: Rng,
+    private readonly thinking: ThinkingMode = "rules",
+  ) {
     const self = this;
     const host: InquiryHost = {
       rng,
@@ -84,7 +114,7 @@ export class RoutineMind implements Mind {
         case "thing": {
           const category = categoryOf(o.features);
           this.things.set(o.thing, { place: o.place, features: o.features, category });
-          if (o.features.looks === "built") this.inquiry.noteStructure(o.place, o.features);
+          if (o.features.looks === "built" && this.rules) this.inquiry.noteStructure(o.place, o.features);
           if (!this.knownCategories.has(category)) {
             this.knownCategories.add(category);
             this.memory.remember({ tick: o.tick, kind: "discovered", place: o.place, thing: o.thing, category, salience: 0.6 });
@@ -97,9 +127,10 @@ export class RoutineMind implements Mind {
           break;
         case "body":
           if (o.feelings.nausea >= 2 && this.feelings.nausea < 2) this.blameRecentMeals(o.tick);
+          this.noteFeelings(this.feelings, o.feelings);
           this.feelings = o.feelings;
           if (this.here && this.sky.rain === true && ["sleep", "shelter", "rest"].includes(this.lastPurpose)) {
-            this.inquiry.noteWet(this.here, o.feelings.wet);
+            if (this.rules) this.inquiry.noteWet(this.here, o.feelings.wet);
           }
           break;
         case "inventory":
@@ -108,10 +139,11 @@ export class RoutineMind implements Mind {
             return { item, features, origin: this.origins.get(item) };
           });
           this.pendingTake = null;
-          this.inquiry.noteHeldPieces();
+          if (this.rules) this.inquiry.noteHeldPieces();
           break;
         case "outcome":
           this.learnFromOutcome(o);
+          if (this.thinking === "external") this.followUp(o);
           break;
       }
     }
@@ -120,6 +152,13 @@ export class RoutineMind implements Mind {
 
   decide(tick: number): Action {
     this.now = tick;
+    if (this.thinking === "external") {
+      const action = this.decideWithThoughts();
+      this.lastPurpose = action.purpose;
+      this.wasAsleep = action.kind === "sleep";
+      if (action.kind === "take") this.pendingTake = action.source;
+      return action;
+    }
     const f = this.feelings;
     const dark = this.sky.light === "dark";
     const exposed = this.sky.rain === true && (this.sky.wind === "strong" || f.cold >= 2 || f.wet >= 3);
@@ -189,6 +228,235 @@ export class RoutineMind implements Mind {
     return null;
   }
 
+  private get rules(): boolean {
+    return this.thinking === "rules";
+  }
+
+  // --- thinking (stage 5) -------------------------------------------------------
+
+  /** Asked before every decision: does the character want to stop and think? */
+  wantsThought(): ThinkRequest | null {
+    if (this.thinking !== "external") return null;
+    const day = Math.floor(this.now / 1440);
+    if (this.thinksToday.day !== day) this.thinksToday = { day, count: 0 };
+    if (this.thinksToday.count >= THINKS_PER_DAY) return null;
+    let reason = this.thinkReason;
+    if (!reason && !this.plan && this.now - this.lastThink >= THINK_GAP && Math.max(this.feelings.thirst, this.feelings.hunger) < 3) {
+      reason = this.wasAsleep ? "woke" : "free";
+    }
+    if (!reason) return null;
+    return { view: this.view(reason) };
+  }
+
+  receiveThought(thought: Thought, by: string): void {
+    this.thinksToday.count++;
+    this.lastThink = this.now;
+    this.thinkReason = null;
+    this.thinkTrigger = undefined;
+    const plan = thought.plan.slice(0, 8);
+    this.plan = plan.length > 0 ? { goal: thought.goal, steps: plan, done: 0 } : null;
+    this.thoughts.push({ text: thought.text, goal: thought.goal });
+    if (this.thoughts.length > 8) this.thoughts.shift();
+    this.emit("thought", { by, text: thought.text, goal: thought.goal ?? null, plan: plan.map(describeStep) });
+  }
+
+  private decideWithThoughts(): Action {
+    const f = this.feelings;
+    const dark = this.sky.light === "dark";
+    const urgent = this.mostUrgent(dark);
+    // The body comes first when it really hurts.
+    if (urgent.level >= 3) {
+      const action = this.pursue(urgent.goal);
+      if (action) return action;
+    }
+    const planned = this.nextPlannedAction();
+    if (planned) return planned;
+    if (urgent.level >= 2) {
+      const action = this.pursue(urgent.goal);
+      if (action) return action;
+    }
+    if (dark && f.tired >= 1) return { kind: "sleep", purpose: "sleep" };
+    return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: THINK_GAP, purpose: "idle" };
+  }
+
+  private mostUrgent(dark: boolean): { goal: Purpose; level: number } {
+    const f = this.feelings;
+    const exposed = this.sky.rain === true && (this.sky.wind === "strong" || f.cold >= 2 || f.wet >= 3);
+    const urgency: [Purpose, number][] = [
+      ["drink", f.thirst + 0.3],
+      ["eat", f.hunger],
+      ["sleep", f.tired + (dark ? 1.6 : -1) - (f.tired === 0 ? 2 : 0) - (f.cold >= 3 ? 3 : 0)],
+      ["shelter", exposed || f.cold >= 3 ? 2 + f.cold * 0.5 : 0],
+    ];
+    urgency.sort((a, b) => b[1] - a[1]);
+    return { goal: urgency[0]![0], level: urgency[0]![1] };
+  }
+
+  /** Turns the next planned step into an action, walking there first if needed. */
+  private nextPlannedAction(): Action | null {
+    const plan = this.plan;
+    if (!plan) return null;
+    while (plan.done < plan.steps.length) {
+      const step = plan.steps[plan.done]!;
+      const result = this.resolveStep(step);
+      if (result === "done") {
+        plan.done++;
+        continue;
+      }
+      if (typeof result === "string") {
+        this.setback(`${describeStep(step)}: ${result}`);
+        return { kind: "idle", minutes: 1, purpose: "plan" };
+      }
+      // Walking towards a step is not the step itself; a move step is done on arrival.
+      this.planStepPending = result.kind === step.kind && step.kind !== "move";
+      return result;
+    }
+    // Done: think again right away (a one-minute pause hands over to the thinker).
+    this.plan = null;
+    this.thinkReason = "plan done";
+    return { kind: "idle", minutes: 1, purpose: "plan" };
+  }
+
+  /** An action for a step, "done" if nothing is left to do for it, or why it cannot be done. */
+  private resolveStep(step: PlanStep): Action | "done" | string {
+    const purpose: Purpose = step.kind === "idle" ? "idle" : step.kind === "rest" ? "rest" : step.kind === "sleep" ? "sleep" : "plan";
+    const held = (id: string) => this.carriedItems.some((c) => c.item === id);
+    const walkTo = (place: string): Action | string => this.stepTowards(place, purpose) ?? "no known way there";
+    const atThing = (id: string): Action | null | string => {
+      const thing = this.things.get(id);
+      if (!thing) return `does not know ${id}`;
+      return thing.place === this.here ? null : walkTo(thing.place);
+    };
+    switch (step.kind) {
+      case "move":
+        if (!this.places.has(step.to)) return `does not know ${step.to}`;
+        return step.to === this.here ? "done" : walkTo(step.to);
+      case "idle":
+      case "rest":
+        return { ...step, minutes: Math.min(120, Math.max(5, Math.round(Number(step.minutes) || 30))), purpose };
+      case "sleep":
+        return { kind: "sleep", purpose };
+      case "drink":
+      case "eat":
+      case "take": {
+        const target = step.kind === "take" ? step.source : step.target;
+        const walk = atThing(target);
+        if (walk) return walk;
+        if (step.kind === "eat" && step.tool && !held(step.tool)) return `not holding ${step.tool}`;
+        return { ...step, purpose } as Action;
+      }
+      case "put": {
+        if (!held(step.item)) return `not holding ${step.item}`;
+        const walk = atThing(step.onto);
+        if (walk) return walk;
+        return { ...step, purpose };
+      }
+      case "drop":
+        return held(step.item) ? { ...step, purpose } : `not holding ${step.item}`;
+      case "rub":
+        if (!held(step.item) || !held(step.against)) return "not holding both pieces";
+        return { ...step, purpose };
+      case "bind":
+        if (!step.items?.every(held) || !held(step.binder)) return "not holding all pieces";
+        return { ...step, purpose };
+      case "build":
+        if (!held(step.item)) return `not holding ${step.item}`;
+        return { ...step, purpose };
+      case "tie":
+        return held(step.binder) ? { ...step, purpose } : `not holding ${step.binder}`;
+      default:
+        return `cannot do "${(step as { kind: string }).kind}"`;
+    }
+  }
+
+  /** After an outcome: advance the plan, and stop to think on setbacks and surprises. */
+  private followUp(o: Extract<Observation, { kind: "outcome" }>): void {
+    const line = this.experienceLine(o);
+    this.recent.push(line);
+    if (this.recent.length > RECENT) this.recent.shift();
+    const signature = `${o.action.kind}:${o.felt.result ?? ""}:${o.felt.taste ?? ""}:${o.felt.tool ?? ""}`;
+    const surprising = !this.seenResults.has(signature) && o.action.kind !== "move" && o.action.kind !== "idle";
+    this.seenResults.add(signature);
+    if (surprising) {
+      this.discoveries.push(line);
+      if (this.discoveries.length > DISCOVERIES) this.discoveries.shift();
+    }
+    const wasPlanned = this.planStepPending;
+    this.planStepPending = false;
+    if (wasPlanned && this.plan) {
+      if (!o.success) return this.setback(line);
+      this.plan.done++;
+      if (this.plan.done >= this.plan.steps.length) {
+        this.plan = null;
+        this.thinkReason = "plan done";
+      }
+    }
+    if (surprising && o.action.purpose === "plan") {
+      this.thinkReason = "surprise";
+      this.thinkTrigger = line;
+    }
+  }
+
+  private setback(why: string): void {
+    this.plan = null;
+    this.planStepPending = false;
+    this.thinkReason = "setback";
+    this.thinkTrigger = why;
+  }
+
+  /** Feelings worth remembering: a need getting pressing, or going away. */
+  private noteFeelings(before: Feelings, after: Feelings): void {
+    if (this.thinking !== "external") return;
+    for (const k of Object.keys(after) as (keyof Feelings)[]) {
+      const [b, a] = [before[k], after[k]];
+      if ((a >= 2 && b < 2) || (a < 2 && b >= 2) || (a >= 3 && b < 3)) {
+        const where = this.here ? ` at ${this.here}` : "";
+        this.recent.push(`${clock(this.now)}${where}: ${k} ${a > b ? "rose" : "fell"} to ${a} of 4`);
+        if (this.recent.length > RECENT) this.recent.shift();
+      }
+    }
+  }
+
+  private experienceLine(o: Extract<Observation, { kind: "outcome" }>): string {
+    const felt = Object.entries(o.felt)
+      .map(([k, v]) => `${k}: ${String(v)}`)
+      .join(", ");
+    const step = describeStep(o.action as unknown as PlanStep).replace(/ purpose=\S+/, "");
+    return `${clock(o.tick)} at ${this.here ?? "?"}: ${step} -> ${o.success ? "ok" : "failed"}${felt ? ` (${felt})` : ""}`;
+  }
+
+  /** The character's own view of everything, for the thinker. Built from observations and memory only. */
+  private view(reason: ThinkReason): MindView {
+    const t = this.now;
+    const beliefs = this.beliefs
+      .all()
+      .map((b) => ({
+        about: b.category,
+        doing: b.action,
+        effect: b.effect,
+        confidence: Math.round(this.beliefs.confidence(b.category, b.action, b.effect) * 100) / 100,
+        evidence: Math.round((b.for + b.against) * 10) / 10,
+      }))
+      .sort((a, b) => b.evidence - a.evidence)
+      .slice(0, 25);
+    return {
+      reason,
+      trigger: this.thinkTrigger,
+      time: { day: Math.floor(t / 1440) + 1, hour: Math.floor((t % 1440) / 60), minute: t % 60 },
+      sky: this.sky,
+      here: this.here,
+      feelings: this.feelings,
+      places: [...this.places].map(([place, p]) => ({ place, features: p.features, exits: p.exits, visited: p.visited })),
+      things: [...this.things].map(([id, th]) => ({ id, place: th.place, looks: th.features })),
+      holding: this.carriedItems.map((c) => ({ item: c.item, looks: c.features })),
+      beliefs,
+      recent: [...this.recent],
+      discoveries: [...this.discoveries],
+      thoughts: [...this.thoughts],
+      plan: this.plan ? { goal: this.plan.goal, done: this.plan.done, left: this.plan.steps.slice(this.plan.done) } : undefined,
+    };
+  }
+
   drainEvents(): MindEvent[] {
     const out = this.events;
     this.events = [];
@@ -211,7 +479,7 @@ export class RoutineMind implements Mind {
       case "shelter": {
         const spot = this.bestCover(3);
         if (!spot || spot === this.here) {
-          if (this.here && this.sky.rain === true) this.inquiry.noteWet(this.here, this.feelings.wet);
+          if (this.here && this.sky.rain === true && this.rules) this.inquiry.noteWet(this.here, this.feelings.wet);
           return { kind: "rest", minutes: 30, purpose: "shelter" };
         }
         return this.stepTowards(spot, "shelter");
@@ -345,7 +613,7 @@ export class RoutineMind implements Mind {
     if (!o.success) {
       learn("fails", true);
       this.memory.remember({ tick: o.tick, kind: "failed", place: thing.place, thing: a.target, category, salience: 0.4 });
-      if (!toolFeatures && typeof result === "string") this.inquiry.noteFoodFailure(category, result);
+      if (!toolFeatures && typeof result === "string" && this.rules) this.inquiry.noteFoodFailure(category, result);
       return;
     }
     learn("fails", false, 0.5);
@@ -466,4 +734,11 @@ function eatPrior(f: Features): number {
 /** Belief key for "eating CATEGORY with a held piece of this class". */
 function toolKey(category: string, toolFeatures: Features): string {
   return `${category}|with:${toolClass(toolFeatures)}`;
+}
+
+function clock(tick: number): string {
+  const day = Math.floor(tick / 1440) + 1;
+  const h = Math.floor((tick % 1440) / 60);
+  const m = tick % 60;
+  return `day ${day} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }

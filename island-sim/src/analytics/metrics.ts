@@ -57,12 +57,18 @@ export interface RunMetrics {
   toolMeals: number;
   /** Hours spent soaked (wetness > 0.5). */
   soakedHours: number;
+  /** Thoughts the character had (stage 5; 0 with the built-in rules). */
+  thoughts: number;
+  /** Times something glowing flared up into a flame. */
+  firesLit: number;
+  /** Hours until the first flame; null if never. */
+  hoursToFirstFire: number | null;
   weatherDays: Record<WeatherKind, number>;
 }
 
 export const PENDING_METRICS = ["capabilityGaps", "strategyFatigue"] as const;
 
-const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle", "experiment", "work"] as const;
+const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle", "experiment", "work", "plan"] as const;
 
 export function computeMetrics(result: SimResult): RunMetrics {
   const weatherDays = Object.fromEntries(WEATHER_KINDS.map((k) => [k, 0])) as Record<WeatherKind, number>;
@@ -80,6 +86,8 @@ export function computeMetrics(result: SimResult): RunMetrics {
   const tested = new Set<unknown>();
   const solved = new Set<unknown>();
   let toolMeals = 0;
+  let firesLit = 0;
+  let hoursToFirstFire: number | null = null;
 
   for (const e of result.log.all()) {
     const d = e.data ?? {};
@@ -95,6 +103,10 @@ export function computeMetrics(result: SimResult): RunMetrics {
       learning.add(`${d.use}|${d.chosen}|${d.instead}`);
     }
     if (e.type !== "action.end") continue;
+    if (d.put === "flared up") {
+      firesLit++;
+      if (hoursToFirstFire === null) hoursToFirstFire = round(e.tick / 60, 1);
+    }
     if (d.kind === "move" && d.success) visited.add(d.place as string);
     if (d.kind === "bind" && d.success) count["action.end.bind"] = (count["action.end.bind"] ?? 0) + 1;
     if (d.kind === "drink" && d.success) {
@@ -148,6 +160,9 @@ export function computeMetrics(result: SimResult): RunMetrics {
     constructions: (count["action.end.bind"] ?? 0) + (count["construction.built"] ?? 0),
     toolMeals,
     soakedHours: round(result.soakedTicks / 60, 1),
+    thoughts: count["thought"] ?? 0,
+    firesLit,
+    hoursToFirstFire,
     weatherDays,
   };
 }

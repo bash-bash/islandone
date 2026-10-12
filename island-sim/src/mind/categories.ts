@@ -6,7 +6,7 @@ import type { Features } from "./types";
  * objectively. A category is a stable string built from the look features;
  * volatile features (how many are left) are ignored.
  */
-const VOLATILE = new Set(["amount", "roof", "uprights", "leaves", "tied"]);
+const VOLATILE = new Set(["amount", "roof", "uprights", "leaves", "tied", "moisture", "flames"]);
 
 export function categoryOf(features: Features): string {
   return Object.keys(features)
