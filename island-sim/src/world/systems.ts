@@ -2,7 +2,8 @@ import { TICKS_PER_DAY, TICKS_PER_HOUR, timeOf } from "../core/time";
 import type { TickContext } from "../sim";
 import { tickBody, type DamageCause } from "./body";
 import { nextWeather } from "./weather";
-import { isDark } from "./world";
+import { effectiveCover, isDark } from "./world";
+import { structureCover } from "./structures";
 import { isActive } from "./actions";
 
 /** A world system advances one part of the objective world each tick. */
@@ -42,6 +43,7 @@ function stormAftermath(ctx: TickContext): void {
     let added = 0;
     if (thing.kind === "driftwood") added = rng.int(2, 6);
     if (thing.kind === "branches") added = rng.int(1, 4);
+    if (thing.kind === "palm_fronds") added = rng.int(1, 3);
     if (added > 0) {
       thing.amount += added;
       ctx.log.push({ tick: ctx.tick, source: "weather", type: "storm.washed_up", data: { thing: thing.id, added } });
@@ -73,6 +75,7 @@ export const bodySystem: WorldSystem = {
       log.push({ tick, source: "body", type: "sickness.onset", data: { sickness: effect.sickness } });
     }
     const place = world.places.get(world.character.place)!;
+    const cover = effectiveCover(world, place.id);
     const current = world.character.current;
     const hour = timeOf(tick).hour;
     const damage = tickBody(world.body, {
@@ -80,7 +83,7 @@ export const bodySystem: WorldSystem = {
       windy: world.weather === "storm",
       hot: world.weather === "heat" && !isDark(hour),
       dark: isDark(hour),
-      cover: place.cover,
+      cover,
       active: current ? isActive(world, current.action) : false,
     });
     for (const [cause, amount] of Object.entries(damage) as [DamageCause, number][]) world.damage[cause] += amount;
@@ -101,4 +104,41 @@ function dominantCause(damage: Partial<Record<DamageCause, number>>): DamageCaus
   return best;
 }
 
-export const WORLD_SYSTEMS: readonly WorldSystem[] = [weatherSystem, regrowSystem, bodySystem];
+/**
+ * Wind takes loose pieces off what was built (Handoff §11: consequences are
+ * causal). Tied pieces mostly stay; leaves without a frame fly first.
+ */
+export const structureSystem: WorldSystem = {
+  id: "structures",
+  tick(ctx) {
+    const { world, tick, log } = ctx;
+    if (tick % TICKS_PER_HOUR !== 0 || world.weather !== "storm" || world.structures.size === 0) return;
+    const rng = ctx.rng.get("structures");
+    for (const structure of world.structures.values()) {
+      const before = structureCover(structure, world.items);
+      const lost: string[] = [];
+      for (const id of structure.parts) {
+        const item = world.items.get(id);
+        if (!item) continue;
+        const tied = structure.bound.has(id);
+        const p = item.material === "leaf" ? (tied ? 0.02 : 0.25) : tied ? 0.01 : 0.06;
+        if (rng.chance(p)) lost.push(id);
+      }
+      if (lost.length === 0) continue;
+      structure.parts = structure.parts.filter((id) => !lost.includes(id));
+      for (const id of lost) structure.bound.delete(id);
+      log.push({
+        tick,
+        source: "world",
+        type: "structure.damaged",
+        data: { structure: structure.id, lost: lost.length, coverBefore: round2(before), coverAfter: round2(structureCover(structure, world.items)) },
+      });
+    }
+  },
+};
+
+function round2(v: number): number {
+  return Math.round(v * 100) / 100;
+}
+
+export const WORLD_SYSTEMS: readonly WorldSystem[] = [weatherSystem, regrowSystem, structureSystem, bodySystem];

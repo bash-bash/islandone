@@ -1,6 +1,8 @@
 import type { Rng } from "../core/rng";
 import { BeliefStore, type BeliefChange, type Effect } from "./beliefs";
 import { categoryOf } from "./categories";
+import { Inquiry, type InquiryHost } from "./inquiry";
+import { toolClass } from "./intuition";
 import { EpisodicMemory } from "./memory";
 import type { Action, Features, Feelings, Mind, MindEvent, Observation, Purpose } from "./types";
 
@@ -25,7 +27,9 @@ type Use = "drink" | "eat";
  * expectations alone is reported as "learning.applied" (Handoff §5: learning
  * must change behaviour).
  *
- * Not yet: analogy between categories, hypotheses, experiments (stages 4–5).
+ * Problems, hypotheses and experiments live in src/mind/inquiry.ts (stage 4):
+ * the character works on them in its free time, and what turns out to work
+ * (a tool for a food source, a roof at its sleeping spot) is used from then on.
  */
 export class RoutineMind implements Mind {
   private here: string | null = null;
@@ -41,8 +45,30 @@ export class RoutineMind implements Mind {
   private sky: Features = { light: "light", rain: false, wind: "light" };
   private lastMove: { from: string; to: string } | null = null;
   private events: MindEvent[] = [];
+  private carriedItems: { item: string; features: Features; origin?: string }[] = [];
+  private readonly origins = new Map<string, string>();
+  private pendingTake: string | null = null;
+  private lastPurpose: Purpose = "idle";
+  private readonly inquiry: Inquiry;
 
-  constructor(private readonly rng: Rng) {}
+  constructor(private readonly rng: Rng) {
+    const self = this;
+    const host: InquiryHost = {
+      rng,
+      beliefs: this.beliefs,
+      now: () => self.now,
+      here: () => self.here,
+      placeFeatures: (place) => self.places.get(place)?.features ?? {},
+      feelings: () => self.feelings,
+      raining: () => self.sky.rain === true,
+      carried: () => self.carriedItems,
+      things: () => self.things.entries(),
+      stepTowards: (place, purpose) => self.stepTowards(place, purpose),
+      distance: (place) => self.distance(place),
+      emit: (type, data) => self.emit(type, data),
+    };
+    this.inquiry = new Inquiry(host);
+  }
 
   observe(observations: readonly Observation[]): void {
     for (const o of observations) {
@@ -58,6 +84,7 @@ export class RoutineMind implements Mind {
         case "thing": {
           const category = categoryOf(o.features);
           this.things.set(o.thing, { place: o.place, features: o.features, category });
+          if (o.features.looks === "built") this.inquiry.noteStructure(o.place, o.features);
           if (!this.knownCategories.has(category)) {
             this.knownCategories.add(category);
             this.memory.remember({ tick: o.tick, kind: "discovered", place: o.place, thing: o.thing, category, salience: 0.6 });
@@ -71,6 +98,17 @@ export class RoutineMind implements Mind {
         case "body":
           if (o.feelings.nausea >= 2 && this.feelings.nausea < 2) this.blameRecentMeals(o.tick);
           this.feelings = o.feelings;
+          if (this.here && this.sky.rain === true && ["sleep", "shelter", "rest"].includes(this.lastPurpose)) {
+            this.inquiry.noteWet(this.here, o.feelings.wet);
+          }
+          break;
+        case "inventory":
+          this.carriedItems = o.items.map(({ item, features }) => {
+            if (!this.origins.has(item) && this.pendingTake) this.origins.set(item, this.pendingTake);
+            return { item, features, origin: this.origins.get(item) };
+          });
+          this.pendingTake = null;
+          this.inquiry.noteHeldPieces();
           break;
         case "outcome":
           this.learnFromOutcome(o);
@@ -96,15 +134,59 @@ export class RoutineMind implements Mind {
     urgency.sort((a, b) => b[1] - a[1]);
     const [goal, level] = urgency[0]!;
 
+    const action = this.choose(goal, level, dark);
+    this.lastPurpose = action.purpose;
+    if (action.kind === "take") this.pendingTake = action.source;
+    return action;
+  }
+
+  private choose(goal: Purpose, level: number, dark: boolean): Action {
+    const f = this.feelings;
     if (level >= 2) {
       const action = this.pursue(goal);
       if (action) return action;
+    }
+    // Free time (Handoff §5): keep tools that proved useful, work on open problems, try untested food.
+    if (!dark && f.tired < 3) {
+      const upkeep = this.toolUpkeep();
+      if (upkeep) return upkeep;
+      const experiment = this.inquiry.next();
+      if (experiment) return experiment;
+      const taste = f.hunger >= 1 ? this.tasteSomethingNew() : null;
+      if (taste) return taste;
+    } else if (this.sky.rain === true) {
+      // A shelter test can also happen at night: it only needs rain.
+      const experiment = this.inquiry.next();
+      if (experiment?.purpose === "experiment" && experiment.kind !== "take") return experiment;
     }
     if (!dark && this.rng.chance(0.6)) {
       const explore = this.exploreStep();
       if (explore) return explore;
     }
     return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: 30, purpose: "idle" };
+  }
+
+  /** A food source that has a working method but the tool is not in hand: make or fetch it again. */
+  private toolUpkeep(): Action | null {
+    for (const [, t] of this.things) {
+      const method = this.inquiry.methodFor(t.category);
+      if (!method || this.inquiry.toolFor(method)) continue;
+      if (t.features.amount === "none") continue;
+      return this.inquiry.upkeep(method);
+    }
+    return null;
+  }
+
+  /** Curiosity: when a little hungry and nothing else to do, try a food-looking thing never tried before. */
+  private tasteSomethingNew(): Action | null {
+    if (!this.rng.chance(0.25)) return null;
+    for (const [id, t] of this.things) {
+      if (eatPrior(t.features) <= 0 || t.features.amount === "none") continue;
+      if (this.beliefs.experienced(t.category, "eat")) continue;
+      if (t.place === this.here) return { kind: "eat", target: id, purpose: "experiment" };
+      return this.stepTowards(t.place, "experiment");
+    }
+    return null;
   }
 
   drainEvents(): MindEvent[] {
@@ -128,7 +210,10 @@ export class RoutineMind implements Mind {
       }
       case "shelter": {
         const spot = this.bestCover(3);
-        if (!spot || spot === this.here) return { kind: "rest", minutes: 30, purpose: "shelter" };
+        if (!spot || spot === this.here) {
+          if (this.here && this.sky.rain === true) this.inquiry.noteWet(this.here, this.feelings.wet);
+          return { kind: "rest", minutes: 30, purpose: "shelter" };
+        }
         return this.stepTowards(spot, "shelter");
       }
       default:
@@ -145,7 +230,7 @@ export class RoutineMind implements Mind {
 
   private consume(use: Use, need: number): Action | null {
     const threshold = need >= 4 ? -0.6 : 0.1;
-    type Choice = { thing: string; place: string; category: string; value: number };
+    type Choice = { thing: string; place: string; category: string; value: number; tool?: string; label: string };
     let learned: Choice | null = null;
     let innate: Choice | null = null;
     for (const [id, t] of this.things) {
@@ -155,25 +240,36 @@ export class RoutineMind implements Mind {
       if (cost === null) continue;
       const jitter = this.rng.range(0, 0.05);
       const base = -cost / 240 + jitter;
-      const withLearning = this.expectation(t.category, use, prior, true);
+      let withLearning = this.expectation(t.category, use, prior, true);
+      let tool: string | undefined;
+      let label = t.category;
+      // A held piece that has been tried on this kind of food before (experiments, stage 4).
+      if (use === "eat") {
+        for (const held of this.carriedItems) {
+          const key = toolKey(t.category, held.features);
+          if (!this.beliefs.experienced(key, "eat")) continue;
+          const value = this.expectation(key, use, prior, true);
+          if (value > withLearning) [withLearning, tool, label] = [value, held.item, key];
+        }
+      }
       const withoutLearning = this.expectation(t.category, use, prior, false);
       if (withLearning >= threshold && (!learned || withLearning + base > learned.value)) {
-        learned = { thing: id, place: t.place, category: t.category, value: withLearning + base };
+        learned = { thing: id, place: t.place, category: t.category, value: withLearning + base, tool, label };
       }
       if (withoutLearning >= threshold && (!innate || withoutLearning + base > innate.value)) {
-        innate = { thing: id, place: t.place, category: t.category, value: withoutLearning + base };
+        innate = { thing: id, place: t.place, category: t.category, value: withoutLearning + base, label: t.category };
       }
     }
-    if (learned?.category !== innate?.category) {
+    if (learned?.label !== innate?.label) {
       // Experience made the character choose differently than instinct would have.
       this.emit("learning.applied", {
         use,
-        chosen: learned?.category ?? null,
-        instead: innate?.category ?? null,
+        chosen: learned?.label ?? null,
+        instead: innate?.label ?? null,
       });
     }
     if (!learned) return this.exploreStep() ?? null;
-    if (learned.place === this.here) return { kind: use, target: learned.thing, purpose: use };
+    if (learned.place === this.here) return { kind: use, target: learned.thing, tool: learned.tool, purpose: use } as Action;
     return this.stepTowards(learned.place, use);
   }
 
@@ -189,14 +285,21 @@ export class RoutineMind implements Mind {
   }
 
   private bestCover(maxHops: number): string | null {
-    const rank = (features: Features) => (features.cover === "sheltered" ? 2 : features.cover === "partial" ? 1 : 0);
+    const roofRank: Record<string, number> = { thick: 3, solid: 2.5, thin: 1, none: 0 };
+    const built = new Map<string, number>();
+    for (const t of this.things.values()) {
+      if (t.features.looks === "built") built.set(t.place, roofRank[String(t.features.roof)] ?? 0);
+    }
+    // Natural cover, or what it built there, whichever looks better.
+    const rank = (features: Features, place: string) =>
+      Math.max(features.cover === "sheltered" ? 2 : features.cover === "partial" ? 1 : 0, built.get(place) ?? 0);
     let best: string | null = null;
     let bestValue = -Infinity;
     for (const [id, p] of this.places) {
       if (!p.visited) continue;
       const route = this.route(id);
       if (!route || route.hops > maxHops) continue;
-      const value = rank(p.features) - route.hops * 0.4;
+      const value = rank(p.features, id) - route.hops * 0.4;
       if (value > bestValue) [best, bestValue] = [id, value];
     }
     return best;
@@ -210,13 +313,25 @@ export class RoutineMind implements Mind {
       this.travel.set(`${this.lastMove.from}>${this.lastMove.to}`, o.minutes);
       this.travel.set(`${this.lastMove.to}>${this.lastMove.from}`, o.minutes);
     }
+    if (a.kind === "rest" && a.purpose === "experiment") this.inquiry.recordWetTest();
     if (a.kind !== "drink" && a.kind !== "eat") return;
     const thing = this.things.get(a.target);
     if (!thing) return;
     const { category } = thing;
+    const toolFeatures = a.kind === "eat" && a.tool ? this.carriedItems.find((c) => c.item === a.tool)?.features : undefined;
+    // With a tool, what is learned is about "this food with this kind of piece".
+    const key = toolFeatures ? toolKey(category, toolFeatures) : category;
     const prior = a.kind === "drink" ? drinkPrior(thing.features) : eatPrior(thing.features);
     const learn = (effect: Effect, holds: boolean, weight = 1) =>
-      this.recordChange(this.beliefs.update(category, a.kind as Use, effect, holds, o.tick, weight, prior));
+      this.recordChange(this.beliefs.update(key, a.kind as Use, effect, holds, o.tick, weight, prior));
+    if (a.kind === "eat" && a.tool && this.inquiry.pending?.kind === "tool") {
+      const result = o.felt.result;
+      if (result !== "none left" && result !== "not holding that" && result !== "not here") {
+        this.inquiry.recordTest(o.success, toolFeatures);
+      } else {
+        this.inquiry.pending = null;
+      }
+    }
 
     const result = o.felt.result;
     if (result === "none left") {
@@ -230,6 +345,7 @@ export class RoutineMind implements Mind {
     if (!o.success) {
       learn("fails", true);
       this.memory.remember({ tick: o.tick, kind: "failed", place: thing.place, thing: a.target, category, salience: 0.4 });
+      if (!toolFeatures && typeof result === "string") this.inquiry.noteFoodFailure(category, result);
       return;
     }
     learn("fails", false, 0.5);
@@ -345,4 +461,9 @@ function eatPrior(f: Features): number {
   if (f.looks === "shells") return 0.45;
   if (f.looks === "animal") return 0.35;
   return 0;
+}
+
+/** Belief key for "eating CATEGORY with a held piece of this class". */
+function toolKey(category: string, toolFeatures: Features): string {
+  return `${category}|with:${toolClass(toolFeatures)}`;
 }

@@ -40,12 +40,29 @@ export interface RunMetrics {
   learningEvents: number;
   /** Decisions that came out differently than instinct alone would have chosen. */
   decisionsShapedByLearning: number;
+  problemsCreated: number;
+  problemsSolved: number;
+  problemsReopened: number;
+  hypothesesProposed: number;
+  /** Hypotheses with at least one experiment result. */
+  hypothesesTested: number;
+  hypothesesSupported: number;
+  hypothesesRefuted: number;
+  hypothesesDropped: number;
+  /** Switches to another hypothesis for the same problem. */
+  strategyChanges: number;
+  /** Pieces tied together and things built (Handoff §13). */
+  constructions: number;
+  /** Successful meals obtained with a tool. */
+  toolMeals: number;
+  /** Hours spent soaked (wetness > 0.5). */
+  soakedHours: number;
   weatherDays: Record<WeatherKind, number>;
 }
 
-export const PENDING_METRICS = ["hypotheses", "capabilityGaps", "strategyChanges"] as const;
+export const PENDING_METRICS = ["capabilityGaps", "strategyFatigue"] as const;
 
-const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle"] as const;
+const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle", "experiment", "work"] as const;
 
 export function computeMetrics(result: SimResult): RunMetrics {
   const weatherDays = Object.fromEntries(WEATHER_KINDS.map((k) => [k, 0])) as Record<WeatherKind, number>;
@@ -59,18 +76,27 @@ export function computeMetrics(result: SimResult): RunMetrics {
   let beliefsFormed = 0;
   let decisionsShapedByLearning = 0;
   const learning = new Set<string>();
+  const count: Record<string, number> = {};
+  const tested = new Set<unknown>();
+  const solved = new Set<unknown>();
+  let toolMeals = 0;
 
   for (const e of result.log.all()) {
     const d = e.data ?? {};
     if (e.type === "weather.day") weatherDays[d.weather as WeatherKind]++;
     if (e.type === "category.discovered") categoriesDiscovered++;
     if (e.type === "belief.formed") beliefsFormed++;
+    count[e.type] = (count[e.type] ?? 0) + 1;
+    if (e.type === "experiment.result") tested.add(d.hypothesis);
+    if (e.type === "problem.solved") solved.add(d.problem);
+    if (e.type === "action.end" && d.kind === "eat" && d.success && e.data && "tool" in e.data && e.data.tool) toolMeals++;
     if (e.type === "learning.applied") {
       decisionsShapedByLearning++;
       learning.add(`${d.use}|${d.chosen}|${d.instead}`);
     }
     if (e.type !== "action.end") continue;
     if (d.kind === "move" && d.success) visited.add(d.place as string);
+    if (d.kind === "bind" && d.success) count["action.end.bind"] = (count["action.end.bind"] ?? 0) + 1;
     if (d.kind === "drink" && d.success) {
       if (d.thingKind === "spring" && hoursToFreshWater === null) hoursToFreshWater = round(e.tick / 60, 1);
       if (d.thingKind === "sea") seawaterDrinks++;
@@ -110,6 +136,18 @@ export function computeMetrics(result: SimResult): RunMetrics {
     beliefsFormed,
     learningEvents: learning.size,
     decisionsShapedByLearning,
+    problemsCreated: count["problem.created"] ?? 0,
+    problemsSolved: solved.size,
+    problemsReopened: count["problem.reopened"] ?? 0,
+    hypothesesProposed: count["hypothesis.proposed"] ?? 0,
+    hypothesesTested: tested.size,
+    hypothesesSupported: count["hypothesis.supported"] ?? 0,
+    hypothesesRefuted: count["hypothesis.refuted"] ?? 0,
+    hypothesesDropped: count["hypothesis.dropped"] ?? 0,
+    strategyChanges: count["strategy.changed"] ?? 0,
+    constructions: (count["action.end.bind"] ?? 0) + (count["construction.built"] ?? 0),
+    toolMeals,
+    soakedHours: round(result.soakedTicks / 60, 1),
     weatherDays,
   };
 }

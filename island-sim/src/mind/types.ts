@@ -29,15 +29,17 @@ export interface Feelings {
 export type Observation =
   /** The character is at a place and sees its surroundings and the ways on. */
   | { tick: number; kind: "place"; place: string; features: Features; exits: readonly string[] }
-  /** A thing visible at the current place. */
+  /** A thing visible at the current place (a source of food, water or pieces, or something built). */
   | { tick: number; kind: "thing"; thing: string; place: string; features: Features }
+  /** What the character is holding, whenever that changes. */
+  | { tick: number; kind: "inventory"; items: readonly { item: string; features: Features }[] }
   | { tick: number; kind: "body"; feelings: Feelings }
   | { tick: number; kind: "sky"; features: Features }
   /** What the character noticed when an action ended. */
   | { tick: number; kind: "outcome"; action: Action; success: boolean; minutes: number; felt: Features };
 
 /** Why the character does something. Used for analytics (idle rate, time shares). */
-export type Purpose = "drink" | "eat" | "sleep" | "shelter" | "explore" | "rest" | "idle";
+export type Purpose = "drink" | "eat" | "sleep" | "shelter" | "explore" | "rest" | "idle" | "experiment" | "work";
 
 /** What the character attempts. The outcome is computed by the world. */
 export type Action =
@@ -46,7 +48,17 @@ export type Action =
   | { kind: "sleep"; purpose: Purpose }
   | { kind: "move"; to: string; purpose: Purpose }
   | { kind: "drink"; target: string; purpose: Purpose }
-  | { kind: "eat"; target: string; purpose: Purpose };
+  /** Eat from a source; with a tool, the held piece is used on it (strike, stab, pry). */
+  | { kind: "eat"; target: string; tool?: string; purpose: Purpose }
+  /** Pick up a piece from a source (stones, sticks, leaves, …). */
+  | { kind: "take"; source: string; purpose: Purpose }
+  | { kind: "drop"; item: string; purpose: Purpose }
+  /** Tie two held pieces together with a held fiber strip. */
+  | { kind: "bind"; items: readonly [string, string]; binder: string; purpose: Purpose }
+  /** Put a held piece into what is built at the current place (starts something new if nothing is there); optionally tie it in. */
+  | { kind: "build"; item: string; binder?: string; purpose: Purpose }
+  /** Tie one loose part of what is built here with a held fiber strip. */
+  | { kind: "tie"; binder: string; purpose: Purpose };
 
 /** Something that happened inside the mind (a belief formed, learning used). Logged for analytics only. */
 export interface MindEvent {

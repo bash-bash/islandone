@@ -1,7 +1,9 @@
 import type { Rng } from "../core/rng";
 import type { Action } from "../mind/types";
 import type { ThingKind } from "./island";
-import { isDark, type WorldState } from "./world";
+import { bindPieces, PIECE_SOURCES, spawnPiece, type Item } from "./items";
+import { attemptChance, jointBreakChance } from "./tools";
+import { CARRY_LIMIT, isDark, structureAt, type WorldState } from "./world";
 
 /**
  * Resolves what the character's actions actually do. All outcomes are
@@ -19,11 +21,16 @@ export interface ActionResult {
   hunger?: number;
   sickness?: number;
   health?: number;
+  /** Item created or picked up. */
+  item?: string;
+  /** A bound tool came apart during use. */
+  toolBroke?: boolean;
+  structure?: string;
 }
 
 interface Consumption {
   minutes: number;
-  /** Probability that the attempt works with bare hands (no tools exist yet). */
+  /** Probability that the attempt works with bare hands; overridden by tools.ts where tools matter. */
   chance: number;
   failReason?: string;
   /** Uses up one portion on success. */
@@ -47,11 +54,11 @@ const EAT: Partial<Record<ThingKind, Consumption>> = {
   red_berry_bush: { minutes: 10, chance: 1, consumes: true, hunger: -4, sickness: 45, sicknessDelay: 90, active: false },
   // Hard shell: bare hands almost never open it (problem chain "food", plan §3).
   coconut_palm: { minutes: 30, chance: 0.03, failReason: "too_hard", consumes: true, hunger: -25, thirst: -15, active: true },
-  shellfish: { minutes: 20, chance: 0.7, failReason: "stuck", consumes: true, hunger: -12, active: true },
+  shellfish: { minutes: 20, chance: 0.5, failReason: "stuck", consumes: true, hunger: -12, active: true },
   fish: { minutes: 30, chance: 0.06, failReason: "too_fast", consumes: true, hunger: -30, active: true },
 };
 
-/** Minutes the action will take, or null for open-ended actions (sleep). Throws nothing: invalid actions take 1 minute and fail. */
+/** Minutes the action will take, or null for open-ended actions (sleep). Invalid actions take 1–2 minutes and fail. */
 export function actionDuration(world: WorldState, action: Action, hour: number): number | null {
   switch (action.kind) {
     case "idle":
@@ -69,18 +76,27 @@ export function actionDuration(world: WorldState, action: Action, hour: number):
       const spec = consumption(world, action);
       return spec ? spec.minutes : 2;
     }
+    case "take":
+      return 4;
+    case "drop":
+      return 1;
+    case "bind":
+      return 20;
+    case "build":
+      return action.binder ? 15 : 8;
+    case "tie":
+      return 10;
   }
 }
 
 /** Whether the action counts as physical effort (raises needs faster). */
 export function isActive(world: WorldState, action: Action): boolean {
-  if (action.kind === "move") return true;
+  if (action.kind === "move" || action.kind === "take" || action.kind === "build" || action.kind === "tie") return true;
   if (action.kind === "eat" || action.kind === "drink") return consumption(world, action)?.active ?? false;
   return false;
 }
 
 export function completeAction(world: WorldState, action: Action, rng: Rng, tick: number): ActionResult {
-  const body = world.body;
   switch (action.kind) {
     case "idle":
     case "rest":
@@ -92,32 +108,129 @@ export function completeAction(world: WorldState, action: Action, rng: Rng, tick
       return { success: true };
     }
     case "drink":
-    case "eat": {
-      const thing = world.things.get(action.target);
-      if (!thing || thing.place !== world.character.place) return { success: false, reason: "not_here" };
-      const spec = consumption(world, action);
-      if (!spec) return { success: false, reason: action.kind === "drink" ? "not_drinkable" : "inedible", thingKind: thing.kind };
-      if (spec.consumes && thing.amount < 1) return { success: false, reason: "none_left", thingKind: thing.kind };
-      if (!rng.chance(spec.chance)) return { success: false, reason: spec.failReason ?? "failed", thingKind: thing.kind };
-      if (spec.consumes) thing.amount -= 1;
-      body.thirst = clamp(body.thirst + (spec.thirst ?? 0));
-      body.hunger = clamp(body.hunger + (spec.hunger ?? 0));
-      if (spec.sickness && spec.sicknessDelay) {
-        world.delayedEffects.push({ tick: tick + spec.sicknessDelay, sickness: spec.sickness });
-      } else {
-        body.sickness = clamp(body.sickness + (spec.sickness ?? 0));
-      }
-      body.health = clamp(body.health + (spec.health ?? 0));
-      return {
-        success: true,
-        thingKind: thing.kind,
-        thirst: spec.thirst,
-        hunger: spec.hunger,
-        sickness: spec.sickness,
-        health: spec.health,
-      };
+    case "eat":
+      return consume(world, action, rng, tick);
+    case "take":
+      return take(world, action.source, rng);
+    case "drop": {
+      const carried = world.character.carried;
+      const i = carried.indexOf(action.item);
+      if (i < 0) return { success: false, reason: "not_held" };
+      carried.splice(i, 1);
+      return { success: true, item: action.item };
     }
+    case "bind":
+      return bind(world, action.items, action.binder, rng);
+    case "build":
+      return build(world, action.item, action.binder);
+    case "tie":
+      return tieIn(world, action.binder);
   }
+}
+
+function tieIn(world: WorldState, binderId: string): ActionResult {
+  const carried = world.character.carried;
+  if (!carried.includes(binderId)) return { success: false, reason: "not_held" };
+  if ((world.items.get(binderId)?.tieStrength ?? 0) <= 0) return { success: false, reason: "does_not_hold" };
+  const structure = structureAt(world, world.character.place);
+  const loose = structure?.parts.find((id) => !structure.bound.has(id));
+  if (!structure || !loose) return { success: false, reason: "nothing_loose" };
+  structure.bound.add(loose);
+  world.character.carried = carried.filter((id) => id !== binderId);
+  return { success: true, item: loose, structure: structure.id };
+}
+
+function consume(world: WorldState, action: Extract<Action, { kind: "drink" | "eat" }>, rng: Rng, tick: number): ActionResult {
+  const body = world.body;
+  const thing = world.things.get(action.target);
+  if (!thing || thing.place !== world.character.place) return { success: false, reason: "not_here" };
+  const spec = consumption(world, action);
+  if (!spec) return { success: false, reason: action.kind === "drink" ? "not_drinkable" : "inedible", thingKind: thing.kind };
+  if (spec.consumes && thing.amount < 1) return { success: false, reason: "none_left", thingKind: thing.kind };
+
+  let tool: Item | null = null;
+  if (action.kind === "eat" && action.tool) {
+    if (!world.character.carried.includes(action.tool)) return { success: false, reason: "not_held", thingKind: thing.kind };
+    tool = world.items.get(action.tool) ?? null;
+  }
+  const chance = attemptChance(thing.kind, tool) ?? spec.chance;
+  let toolBroke = false;
+  if (tool && rng.chance(jointBreakChance(tool))) {
+    toolBroke = true;
+    unbind(world, tool);
+  }
+  if (!rng.chance(chance)) return { success: false, reason: spec.failReason ?? "failed", thingKind: thing.kind, toolBroke };
+
+  if (spec.consumes) thing.amount -= 1;
+  body.thirst = clamp(body.thirst + (spec.thirst ?? 0));
+  body.hunger = clamp(body.hunger + (spec.hunger ?? 0));
+  if (spec.sickness && spec.sicknessDelay) {
+    world.delayedEffects.push({ tick: tick + spec.sicknessDelay, sickness: spec.sickness });
+  } else {
+    body.sickness = clamp(body.sickness + (spec.sickness ?? 0));
+  }
+  body.health = clamp(body.health + (spec.health ?? 0));
+  return {
+    success: true,
+    thingKind: thing.kind,
+    thirst: spec.thirst,
+    hunger: spec.hunger,
+    sickness: spec.sickness,
+    health: spec.health,
+    toolBroke,
+  };
+}
+
+function take(world: WorldState, source: string, rng: Rng): ActionResult {
+  const thing = world.things.get(source);
+  if (!thing || thing.place !== world.character.place) return { success: false, reason: "not_here" };
+  if (!PIECE_SOURCES[thing.kind]) return { success: false, reason: "nothing_loose", thingKind: thing.kind };
+  if (thing.amount < 1) return { success: false, reason: "none_left", thingKind: thing.kind };
+  if (world.character.carried.length >= CARRY_LIMIT) return { success: false, reason: "hands_full", thingKind: thing.kind };
+  const item = spawnPiece(thing.kind, `i${world.nextId.item++}`, rng)!;
+  thing.amount -= 1;
+  world.items.set(item.id, item);
+  world.character.carried.push(item.id);
+  return { success: true, item: item.id, thingKind: thing.kind };
+}
+
+function bind(world: WorldState, items: readonly [string, string], binder: string, rng: Rng): ActionResult {
+  const carried = world.character.carried;
+  const [a, b] = items.map((id) => world.items.get(id));
+  const tie = world.items.get(binder);
+  if (!a || !b || !tie || items[0] === items[1] || ![...items, binder].every((id) => carried.includes(id))) {
+    return { success: false, reason: "not_held" };
+  }
+  if (tie.tieStrength <= 0) return { success: false, reason: "does_not_hold" };
+  const bound = bindPieces(`i${world.nextId.item++}`, a, b, tie, rng);
+  world.items.set(bound.id, bound);
+  world.character.carried = carried.filter((id) => id !== a.id && id !== b.id && id !== tie.id);
+  world.character.carried.push(bound.id);
+  return { success: true, item: bound.id };
+}
+
+/** A bound piece falls apart into its parts (the fiber is lost). */
+function unbind(world: WorldState, tool: Item): void {
+  const carried = world.character.carried;
+  const i = carried.indexOf(tool.id);
+  if (i < 0 || !tool.parts) return;
+  const [a, b] = tool.parts;
+  carried.splice(i, 1, ...[a!, b!].filter((id) => world.items.has(id)));
+}
+
+function build(world: WorldState, itemId: string, binderId: string | undefined): ActionResult {
+  const carried = world.character.carried;
+  if (!carried.includes(itemId) || (binderId && !carried.includes(binderId))) return { success: false, reason: "not_held" };
+  const place = world.character.place;
+  let structure = structureAt(world, place);
+  if (!structure) {
+    structure = { id: `s${world.nextId.structure++}`, place, parts: [], bound: new Set() };
+    world.structures.set(structure.id, structure);
+  }
+  structure.parts.push(itemId);
+  world.character.carried = carried.filter((id) => id !== itemId && id !== binderId);
+  if (binderId && (world.items.get(binderId)?.tieStrength ?? 0) > 0) structure.bound.add(itemId);
+  return { success: true, item: itemId, structure: structure.id };
 }
 
 function consumption(world: WorldState, action: Action & { target: string }): Consumption | undefined {

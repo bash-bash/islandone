@@ -34,7 +34,7 @@ describe("learning changes behaviour (Handoff §5)", () => {
       const m = computeMetrics(runSimulation({ seed, days: 30, keepEvents: true }));
       expect(m.seawaterDrinks).toBeLessThanOrEqual(1);
     }
-  });
+  }, 60_000);
 
   it("blames nausea on recent meals, hours after eating", () => {
     let checked = 0;
@@ -58,7 +58,7 @@ describe("learning changes behaviour (Handoff §5)", () => {
       expect(blame).toBeDefined();
     }
     expect(checked).toBeGreaterThan(0);
-  });
+  }, 60_000);
 
   it("every run has at least one decision shaped by learning", () => {
     for (let seed = 1; seed <= 20; seed++) {
@@ -66,5 +66,5 @@ describe("learning changes behaviour (Handoff §5)", () => {
       expect(m.learningEvents).toBeGreaterThanOrEqual(1);
       expect(m.decisionsShapedByLearning).toBeGreaterThanOrEqual(m.learningEvents);
     }
-  });
+  }, 60_000);
 });

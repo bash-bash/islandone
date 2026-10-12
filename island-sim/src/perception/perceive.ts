@@ -2,7 +2,9 @@ import type { Action, Features, Feelings, Level, Observation } from "../mind/typ
 import type { ActionResult } from "../world/actions";
 import type { Body } from "../world/body";
 import type { Thing, ThingKind } from "../world/island";
-import { isDark, thingsAt, type WorldState } from "../world/world";
+import type { Item } from "../world/items";
+import { structureCover, type Structure } from "../world/structures";
+import { isDark, structureAt, thingsAt, type WorldState } from "../world/world";
 
 /**
  * The only channel from the objective world to the character (Handoff §5).
@@ -15,6 +17,7 @@ export class Perception {
   private lastFeelings = "";
   private lastSky = "";
   private lastThings = new Map<string, string>();
+  private lastInventory = "";
 
   /** Called once per tick. Returns what the character noticed this tick. */
   perceive(world: WorldState, tick: number, hour: number, arrived: boolean): Observation[] {
@@ -49,26 +52,45 @@ export class Perception {
         features: {
           cover: place.cover < 0.2 ? "open" : place.cover < 0.5 ? "partial" : "sheltered",
           sea: place.coast,
+          ground: place.ground,
         },
         exits: [...world.paths.get(here)!.keys()].sort(),
       });
     }
     // Things at the current place: on arrival, and hourly when they look different.
     if (arrived || tick % 60 === 0) {
-      for (const thing of thingsAt(world, here)) {
-        const features = thingFeatures(thing);
+      const seen: { id: string; features: Features }[] = thingsAt(world, here).map((t) => ({ id: t.id, features: thingFeatures(t) }));
+      const built = structureAt(world, here);
+      if (built) seen.push({ id: built.id, features: structureFeatures(built, world.items) });
+      for (const { id, features } of seen) {
         const key = JSON.stringify(features);
-        if (arrived || this.lastThings.get(thing.id) !== key) {
-          this.lastThings.set(thing.id, key);
-          out.push({ tick, kind: "thing", thing: thing.id, place: here, features });
+        if (arrived || this.lastThings.get(id) !== key) {
+          this.lastThings.set(id, key);
+          out.push({ tick, kind: "thing", thing: id, place: here, features });
         }
       }
+    }
+
+    const carried = world.character.carried;
+    const inventoryKey = carried.join(",");
+    if (inventoryKey !== this.lastInventory) {
+      this.lastInventory = inventoryKey;
+      out.push({
+        tick,
+        kind: "inventory",
+        items: carried.map((id) => ({ item: id, features: itemFeatures(world.items.get(id)!) })),
+      });
     }
     return out;
   }
 
   outcome(tick: number, action: Action, minutes: number, result: ActionResult): Observation {
     return { tick, kind: "outcome", action, success: result.success, minutes, felt: felt(action, result) };
+  }
+
+  /** Re-announces something built here after the character changed it (so the change is seen at once). */
+  forgetPlace(): void {
+    this.lastThings.clear();
   }
 }
 
@@ -104,7 +126,60 @@ const LOOKS: Record<ThingKind, Features> = {
   driftwood: { looks: "wood", form: "washed-up pieces" },
   branches: { looks: "wood", form: "fallen sticks" },
   stones: { looks: "stone", form: "loose" },
+  palm_fronds: { looks: "leaf", form: "fallen fronds" },
 };
+
+function weightOf(mass: number): string {
+  return mass > 1.5 ? "heavy" : mass > 0.6 ? "hefty" : "light";
+}
+
+function lengthOf(length: number): string {
+  return length >= 1.3 ? "long" : length >= 0.8 ? "medium" : "short";
+}
+
+function tipOf(sharpness: number): string {
+  return sharpness >= 0.5 ? "sharp" : sharpness >= 0.25 ? "pointed" : "blunt";
+}
+
+/** What a held piece looks and feels like. */
+export function itemFeatures(item: Item): Features {
+  switch (item.material) {
+    case "stone":
+      return { looks: "stone", shape: item.shape ?? "round", weight: weightOf(item.mass), edge: tipOf(item.sharpness) };
+    case "wood":
+      return { looks: "wood", form: item.shape ?? "stick", length: lengthOf(item.length), tip: tipOf(item.sharpness), weight: weightOf(item.mass) };
+    case "fiber":
+      return { looks: "fiber", form: "strip", feel: item.tieStrength > 0.65 ? "very tough" : "tough" };
+    case "leaf":
+      return { looks: "leaf", size: item.area > 1.2 ? "very large" : "large" };
+    case "bound":
+      return {
+        looks: "bound",
+        length: lengthOf(item.length),
+        tip: tipOf(item.sharpness),
+        weight: weightOf(item.mass),
+        joint: (item.jointStrength ?? 0) > 0.55 ? "tight" : "loose",
+      };
+  }
+}
+
+function structureFeatures(structure: Structure, items: ReadonlyMap<string, Item>): Features {
+  const cover = structureCover(structure, items);
+  let uprights = 0;
+  let leaves = 0;
+  for (const id of structure.parts) {
+    const item = items.get(id);
+    if (item?.material === "leaf") leaves++;
+    else if (item && item.length >= 0.9) uprights++;
+  }
+  return {
+    looks: "built",
+    roof: cover < 0.15 ? "none" : cover < 0.5 ? "thin" : cover < 0.8 ? "solid" : "thick",
+    uprights,
+    leaves,
+    tied: structure.bound.size === 0 ? "none" : structure.parts.every((id) => structure.bound.has(id)) ? "all" : "some",
+  };
+}
 
 function thingFeatures(thing: Thing): Features {
   const base = LOOKS[thing.kind];
@@ -133,15 +208,28 @@ const FAILURE: Record<string, string> = {
   not_drinkable: "nothing to drink",
   not_adjacent: "no way there",
   not_here: "not here",
+  not_held: "not holding that",
+  nothing_loose: "nothing to take",
+  hands_full: "hands full",
+  does_not_hold: "did not hold",
   failed: "did not work",
 };
 
 function felt(action: Action, r: ActionResult): Features {
-  if (!r.success) return { result: FAILURE[r.reason ?? "failed"] ?? "did not work" };
+  if (!r.success) {
+    const failed: Record<string, string> = { result: FAILURE[r.reason ?? "failed"] ?? "did not work" };
+    if (r.toolBroke) failed.tool = "came apart";
+    return failed;
+  }
   const f: Record<string, string> = {};
   if (r.thingKind && TASTE[r.thingKind]) f.taste = TASTE[r.thingKind]!;
   if (r.thirst !== undefined) f.thirst = r.thirst < -20 ? "eased" : r.thirst < 0 ? "a little eased" : "worse";
   if (r.hunger !== undefined) f.hunger = r.hunger <= -15 ? "eased" : "barely";
   if (action.kind === "move") f.result = "arrived";
+  if (action.kind === "take") f.result = "took";
+  if (action.kind === "bind") f.result = "tied";
+  if (action.kind === "build") f.result = "added";
+  if (action.kind === "tie") f.result = "tied";
+  if (r.toolBroke) f.tool = "came apart";
   return f;
 }

@@ -78,8 +78,8 @@ export function tickBody(body: Body, env: BodyEnvironment): Partial<Record<Damag
   else body.energy = clamp(body.energy - RATES.energyAwakePerMin * activity);
 
   const exposure = 1 - env.cover;
-  if (env.raining) body.wetness = Math.min(1, body.wetness + 0.05 * exposure);
-  else body.wetness = Math.max(0, body.wetness - RATES.dryPerMin * (env.hot ? 2 : 1));
+  if (env.raining && exposure > 0.15) body.wetness = Math.min(1, body.wetness + 0.05 * exposure);
+  else body.wetness = Math.max(0, body.wetness - RATES.dryPerMin * (env.hot ? 2 : 1) * (env.raining ? 0.5 : 1));
 
   // Tropical air: being wet only chills in wind or at night; moving keeps you warmer.
   const chill =

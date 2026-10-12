@@ -38,6 +38,8 @@ export interface SimResult {
   purposeTicks: Record<string, number>;
   /** Lowest health reached. */
   minHealth: number;
+  /** Minutes spent soaked (wetness > 0.5). */
+  soakedTicks: number;
 }
 
 /**
@@ -60,6 +62,7 @@ export function runSimulation(options: SimOptions): SimResult {
   const purposeTicks: Record<string, number> = {};
   const total = days * TICKS_PER_DAY;
   let minHealth = world.body.health;
+  let soakedTicks = 0;
   let arrived = true;
   let tick = 0;
 
@@ -69,6 +72,7 @@ export function runSimulation(options: SimOptions): SimResult {
     const ctx: TickContext = { tick, world, rng, log };
     for (const system of WORLD_SYSTEMS) system.tick(ctx);
     if (world.body.health < minHealth) minHealth = world.body.health;
+    if (world.body.wetness > 0.5) soakedTicks++;
     if (world.death) break;
     const hour = timeOf(tick).hour;
 
@@ -82,7 +86,13 @@ export function runSimulation(options: SimOptions): SimResult {
         tick,
         source: "world",
         type: "action.end",
-        data: { kind: current.action.kind, purpose: current.action.purpose, ...result, place: world.character.place },
+        data: {
+          kind: current.action.kind,
+          purpose: current.action.purpose,
+          ...("tool" in current.action && current.action.tool ? { tool: current.action.tool } : {}),
+          ...result,
+          place: world.character.place,
+        },
       });
       mind.observe([perception.outcome(tick, current.action, tick - current.startedAt, result)]);
     }
@@ -115,6 +125,7 @@ export function runSimulation(options: SimOptions): SimResult {
     world,
     purposeTicks,
     minHealth,
+    soakedTicks,
   };
 }
 

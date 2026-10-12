@@ -13,6 +13,8 @@ export interface Place {
   cover: number;
   /** Seawater and shore at this place. */
   coast: boolean;
+  /** What is underfoot. Nothing can be set up where it is "water". */
+  ground: "sand" | "soil" | "rock" | "water";
 }
 
 /** Travel time in virtual minutes (by day; at night ×1.5). */
@@ -29,7 +31,8 @@ export type ThingKind =
   | "driftwood" // loose wood on the beach, more after storms
   | "branches" // fallen branches, more after wind and storms
   | "fiber_plant" // plants with long tough leaves (fiber)
-  | "stones"; // loose stones: round, flat and sharp-edged
+  | "stones" // loose stones: round, flat and sharp-edged
+  | "palm_fronds"; // fallen palm leaves, large
 
 export interface Thing {
   id: string;
@@ -43,13 +46,13 @@ export interface Thing {
 }
 
 export const PLACES: readonly Place[] = [
-  { id: "p1", label: "Strand am Camp", cover: 0, coast: true },
-  { id: "p2", label: "Palmenhain", cover: 0.3, coast: false },
-  { id: "p3", label: "Waldrand", cover: 0.5, coast: false },
-  { id: "p4", label: "Quelle im Inland", cover: 0.4, coast: false },
-  { id: "p5", label: "Felsen mit Überhang", cover: 0.6, coast: true },
-  { id: "p6", label: "Flachwasser", cover: 0, coast: true },
-  { id: "p7", label: "Spülsaum", cover: 0, coast: true },
+  { id: "p1", label: "Strand am Camp", cover: 0, coast: true, ground: "sand" },
+  { id: "p2", label: "Palmenhain", cover: 0.3, coast: false, ground: "sand" },
+  { id: "p3", label: "Waldrand", cover: 0.5, coast: false, ground: "soil" },
+  { id: "p4", label: "Quelle im Inland", cover: 0.4, coast: false, ground: "rock" },
+  { id: "p5", label: "Felsen mit Überhang", cover: 0.6, coast: true, ground: "rock" },
+  { id: "p6", label: "Flachwasser", cover: 0, coast: true, ground: "water" },
+  { id: "p7", label: "Spülsaum", cover: 0, coast: true, ground: "sand" },
 ];
 
 export const PATHS: readonly Path[] = [
@@ -75,11 +78,12 @@ export const THING_SPECS: readonly ThingSpec[] = [
   { kind: "sea", place: "p7", max: 1e9, regrowPerHour: 0 },
   { kind: "spring", place: "p4", max: 1e9, regrowPerHour: 0 },
   { kind: "coconut_palm", place: "p2", max: 12, regrowPerHour: 0.05 },
+  { kind: "palm_fronds", place: "p2", max: 12, regrowPerHour: 0.02 },
   { kind: "fruit_bush", place: "p3", max: 8, regrowPerHour: 0.02 },
   { kind: "red_berry_bush", place: "p3", max: 10, regrowPerHour: 0.3 },
   { kind: "fiber_plant", place: "p3", max: 20, regrowPerHour: 0.1 },
   { kind: "branches", place: "p3", max: 15, regrowPerHour: 0 },
-  { kind: "shellfish", place: "p5", max: 10, regrowPerHour: 0.15 },
+  { kind: "shellfish", place: "p5", max: 10, regrowPerHour: 0.06 },
   { kind: "stones", place: "p5", max: 40, regrowPerHour: 0 },
   { kind: "fish", place: "p6", max: 30, regrowPerHour: 0.2 },
   { kind: "driftwood", place: "p7", max: 20, regrowPerHour: 0 },
