@@ -1,5 +1,4 @@
 import type { RunMetrics } from "./metrics";
-import { PENDING_METRICS } from "./metrics";
 
 export interface Stats {
   /** Runs that have this value (e.g. hoursToFreshWater is missing when never found). */
@@ -22,7 +21,6 @@ export interface BatchSummary {
   metrics: Record<string, Stats>;
   /** Number of deaths per cause. */
   deathCauses: Record<string, number>;
-  pending: readonly string[];
 }
 
 export function stats(values: readonly number[]): Stats {
@@ -70,7 +68,6 @@ export function summarize(runs: readonly RunMetrics[], batchFingerprint: string)
     batchFingerprint,
     metrics,
     deathCauses,
-    pending: PENDING_METRICS,
   };
 }
 
@@ -99,8 +96,6 @@ export function summaryMarkdown(s: BatchSummary): string {
             .map(([cause, count]) => `${cause} ${count}`)
             .join(", ")
     }`,
-    ``,
-    `Noch nicht gemessen (spätere Etappen): ${s.pending.join(", ")}`,
     ``,
   ];
   return lines.join("\n");

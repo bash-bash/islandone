@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import type { MindView, PlanStep, Thinker, Thought } from "../mind/thinking";
+import { CHANGES, type MindView, type PlanStep, type Thinker, type Thought } from "../mind/thinking";
 
 /**
  * The character's thinking done by Claude (Handoff §27).
@@ -40,6 +40,9 @@ const Answer = z.object({
   text: z.string(),
   goal: z.string().nullable(),
   plan: z.array(Step),
+  stuck: z.object({ approach: z.string(), change: z.enum(CHANGES) }).nullable(),
+  missing: z.object({ problem: z.string(), wants: z.array(z.string()) }).nullable(),
+  solved: z.array(z.string()).nullable(),
 });
 
 export const SYSTEM_PROMPT = `Du bist das Denken einer Figur, die allein auf einer Insel gestrandet ist.
@@ -50,6 +53,8 @@ Du weißt nur, was die Figur selbst gesehen, gefühlt und erlebt hat. Das bekomm
 - beliefs: was die Figur aus Erfahrung glaubt, mit Konfidenz.
 - recent und discoveries: Erlebtes in eigenen Worten; discoveries enthält jedes Ergebnis, das zum ersten Mal vorkam.
 - thoughts: deine letzten eigenen Gedanken. reason und trigger: warum du gerade nachdenkst.
+- tries (wenn vorhanden): was du schon mehrmals selbst gemacht hast, wie oft und was dabei herauskam.
+- setAside und gaps (wenn vorhanden): Ansätze, bei denen du selbst gesagt hast, dass du feststeckst, und was dir nach deinen eigenen Worten noch fehlt.
 
 Deine Antwort: ein kurzer Gedanke in der Ich-Form auf Deutsch (text, 1 bis 3 Sätze, so wie man vor sich hin denkt), ein Ziel in eigenen Worten (goal) und die nächsten Schritte (plan, höchstens 6). Du darfst auch nur nachdenken und einen leeren Plan geben.
 
@@ -62,6 +67,11 @@ Schritte (alle nicht genannten Felder sind null):
 - rub {item, against}: ein gehaltenes Stück eine Weile kräftig an einem anderen reiben.
 - put {item, onto}: ein gehaltenes Stück auf ein Ding hier legen.
 - rest {minutes}, idle {minutes}, sleep.
+
+Das Folgende sagst du nur, wenn du es selbst so siehst (sonst null):
+- stuck {approach, change}: Du merkst, dass du mit einem Ansatz nicht weiterkommst. approach beschreibt ihn in eigenen Worten; change sagt, was du stattdessen änderst: material (anderes Material), shape (andere Form), place (anderer Ort), method (andere Vorgehensweise) oder pause (das Problem erst einmal ruhen lassen).
+- missing {problem, wants}: Dir fehlt für ein Problem etwas, das keines der Dinge, die du kennst, gut genug kann. problem in eigenen Worten; wants die Eigenschaften, die das Fehlende haben müsste (zum Beispiel "hält länger als das, was ich habe"), nicht wie es heißt.
+- solved: Kennungen aus gaps, die du jetzt als gelöst ansiehst.
 
 Die Welt entscheidet, was passiert; du erfährst es danach. Niemand sagt dir, wozu etwas gut ist. Sei neugierig, probiere aus, zieh Schlüsse aus dem, was passiert ist, und verfolge, was dir wichtig erscheint. Wenn Durst oder Hunger sehr stark werden, kümmert sich der Körper von selbst darum.`;
 
@@ -121,5 +131,9 @@ export function toThought(answer: z.infer<typeof Answer>): Thought {
     for (const [k, v] of Object.entries(step)) if (v !== null) out[k] = v;
     return out as PlanStep;
   });
-  return { text: answer.text, goal: answer.goal ?? undefined, plan };
+  const thought: Thought = { text: answer.text, goal: answer.goal ?? undefined, plan };
+  if (answer.stuck) thought.stuck = answer.stuck;
+  if (answer.missing) thought.missing = answer.missing;
+  if (answer.solved?.length) thought.solved = answer.solved;
+  return thought;
 }

@@ -53,6 +53,12 @@ async function main(): Promise<number> {
       lines.push(`**${at}** – _${String(d.text)}_${d.goal ? ` (Ziel: ${String(d.goal)})` : ""}`);
       const plan = d.plan as string[];
       if (plan.length > 0) lines.push(`  Plan: ${plan.join(" → ")}`);
+    } else if (e.type === "strategy.fatigue") {
+      lines.push(`  ⟳ Komme nicht weiter mit „${String(d.approach)}“, ändere: ${String(d.change)}`);
+    } else if (e.type === "gap.opened") {
+      lines.push(`  ◇ Es fehlt (${String(d.id)}): ${String(d.problem)}; bräuchte: ${(d.wants as string[]).join(", ")}`);
+    } else if (e.type === "gap.closed") {
+      lines.push(`  ◆ Gelöst (${String(d.id)}): ${String(d.problem)}`);
     } else if (e.type === "action.end" && d.purpose === "plan" && d.kind !== "idle") {
       const what = d.rub ?? d.put ?? (d.success ? "ok" : `fehlgeschlagen (${String(d.reason)})`);
       lines.push(`  ${at} ${String(d.kind)}: ${String(what)}`);

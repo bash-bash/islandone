@@ -117,4 +117,45 @@ describe("a thinker decides what to do with free time (plan stage 5)", () => {
     expect(replay.stats.recorded).toBe(0);
     expect(replay.stats.replayed).toBe(recorder.stats.recorded + recorder.stats.replayed);
   });
+
+  it("strategy fatigue and capability gaps come from the thinker's own words and are shown back to it", () => {
+    const views: MindView[] = [];
+    let n = 0;
+    // Rubs the same two pieces again and again, until the tries in its own view make it say it is stuck.
+    const stubborn: Thinker = {
+      name: "stubborn",
+      think(view: MindView): Thought {
+        views.push(view);
+        n++;
+        const [a, b] = view.holding;
+        const rubbing = view.tries?.find((t) => t.doing.startsWith("rub"));
+        if (rubbing && rubbing.times >= 6 && !view.setAside) {
+          return {
+            text: "Ich reibe immer dasselbe, und es kommt nichts dabei heraus.",
+            plan: [],
+            stuck: { approach: "die beiden Stücke aneinander reiben", change: "material" },
+            missing: { problem: "Wärme machen", wants: ["wird beim Reiben heiß"] },
+          };
+        }
+        if (view.gaps && n > 40) return { text: "Das hat sich erledigt.", plan: [], solved: view.gaps.map((g) => g.id) };
+        if (a && b) return { text: "Noch einmal.", plan: [{ kind: "rub", item: a.item, against: b.item }] };
+        const here = view.things.filter((t) => t.place === view.here);
+        const pick = here[n % Math.max(1, here.length)];
+        return { text: "Ich nehme etwas auf.", plan: pick ? [{ kind: "take", source: pick.id }] : [{ kind: "idle", minutes: 30 }] };
+      },
+    };
+    const r = runSimulation({ seed: 1, days: 2, keepEvents: true, thinker: stubborn });
+    const m = computeMetrics(r);
+    expect(views[0]!.tries).toBeUndefined();
+    expect(views.some((v) => (v.tries?.[0]?.times ?? 0) >= 3)).toBe(true);
+    expect(m.strategyFatigue).toBe(1);
+    expect(m.fatigueChanges.material).toBe(1);
+    expect(m.capabilityGapsOpened).toBe(1);
+    const after = views.find((v) => v.setAside);
+    expect(after?.setAside?.[0]).toMatchObject({ approach: "die beiden Stücke aneinander reiben", change: "material" });
+    expect(after?.gaps?.[0]).toMatchObject({ id: "g1", wants: ["wird beim Reiben heiß"] });
+    expect(m.capabilityGapsClosed).toBe(1);
+    expect(m.capabilityGapsOpen).toBe(0);
+    expect(m.longestSameTry).toBeGreaterThanOrEqual(3);
+  });
 });

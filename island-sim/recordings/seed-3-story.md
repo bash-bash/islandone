@@ -1,266 +1,347 @@
 # Insel, Seed 3, 2 Tage (llm:claude-sonnet-5-5)
 
 - Tag 1 00:00 weather.day {"weather":"cloudy","previous":"clear"}
-**Tag 1 00:00** – _Ich bin gerade aufgewacht, es ist dunkel und ich habe leichten Durst. Da ist viel klares Wasser, vielleicht kann ich davon trinken._ (Ziel: Durst stillen und die Insel erkunden)
+**Tag 1 00:00** – _Ich bin gerade aufgewacht, es ist dunkel und ich stehe am Strand. Etwas Durst habe ich, und da ist klares Wasser in Wellen. Ich probiere erst einmal vorsichtig davon._ (Ziel: Durst stillen und die Umgebung erkunden)
   Plan: drink target=t1
   Tag 1 00:05 drink: ok
-**Tag 1 00:05** – _Salzig, und der Durst ist schlimmer geworden. Dieses Wasser hilft mir nicht, ich muss woanders süßes Wasser finden und die Insel erkunden._ (Ziel: Süßwasser finden und die Insel erkunden)
+**Tag 1 00:05** – _Das Wasser ist salzig, und mein Durst ist schlimmer geworden. Das Meerwasser trinke ich nicht mehr. Ich suche süßes Wasser, wenn es hell wird, und sehe mich dafür an den anderen Orten um._ (Ziel: Trinkbares Süßwasser finden)
   Plan: move to=p2
   Tag 1 00:10 move: ok
-**Tag 1 00:11** – _Hier steht ein hoher Baum mit harten runden Früchten, und trockene Wedel liegen herum. Vielleicht kann ich eine Frucht nehmen, sie könnte Flüssigkeit enthalten._ (Ziel: Süßwasser oder Essbares finden)
-  Plan: take source=t5
+**Tag 1 00:11** – _Hier steht ein hoher Baum mit harten, runden Früchten. Vielleicht kann ich etwas davon nehmen, vielleicht ist darin Flüssigkeit. Ich nehme eine Frucht mit und schaue dann, was bei p3 ist._ (Ziel: Trinkbares Süßwasser finden)
+  Plan: take source=t5 → move to=p3
   Tag 1 00:15 take: fehlgeschlagen (nothing_loose)
-**Tag 1 00:15** – _Vom Baum kann ich nichts nehmen, die Früchte hängen wohl zu hoch. Vielleicht liegt unten etwas, oder ich versuche es mit den Wedeln. Ich schaue erst weiter nach Süßwasser, bei p3._ (Ziel: Süßwasser finden und die Insel erkunden)
+**Tag 1 00:15** – _Vom Baum konnte ich nichts nehmen, die Früchte hängen wohl zu hoch. Unten liegen trockene, abgefallene Wedel, vielleicht nützlich. Ich sehe mir erst die Wedel an und gehe dann weiter nach p3, um Süßwasser zu suchen._ (Ziel: Trinkbares Süßwasser finden)
   Plan: take source=t6 → move to=p3
   Tag 1 00:19 take: ok
-**Tag 1 00:19** – _Ich habe jetzt einen trockenen Wedel genommen, und in der Hand halte ich schon ein sehr großes Blatt. Vielleicht kann ich damit später etwas anfangen. Jetzt gehe ich weiter nach p3 und suche Süßwasser._ (Ziel: Süßwasser finden und die Insel erkunden)
+**Tag 1 00:19** – _Ich habe einen weiteren trockenen Wedel genommen, jetzt halte ich zwei große Blätter. Vielleicht kann ich sie später als Unterlage oder Dach benutzen. Jetzt gehe ich weiter nach p3, um Süßwasser zu suchen._ (Ziel: Trinkbares Süßwasser finden)
   Plan: move to=p3
   Tag 1 00:27 move: ok
-**Tag 1 00:28** – _Hier gibt es Büsche mit weichen gelben und kleinen roten Früchten. Ich probiere erst die gelbe Frucht, vielleicht stillt sie etwas Durst. Dann schaue ich mich weiter um._ (Ziel: Süßwasser oder Essbares finden)
+**Tag 1 00:28** – _Hier bei p3 wachsen Büsche mit weichen gelben und kleinen roten Früchten. Vielleicht steckt darin etwas Saftiges gegen den Durst. Ich probiere vorsichtig von den gelben._ (Ziel: Trinkbares Süßwasser oder Saftiges finden)
   Plan: eat target=t7
   Tag 1 00:38 eat: ok
-**Tag 1 00:38** – _Die gelbe Frucht war süß und hat Hunger und Durst ein wenig gelindert. Etwas Durst ist noch da, also esse ich noch eine davon und schaue dann, ob es hier irgendwo Süßwasser gibt._ (Ziel: Durst ganz stillen und Süßwasser finden)
+**Tag 1 00:38** – _Die gelbe Frucht schmeckt süß und hat Hunger und Durst gelindert, ich esse noch eine. Dann sehe ich mir die roten Früchte an und gehe weiter, um Süßwasser zu finden._ (Ziel: Durst weiter stillen und Süßwasser finden)
   Plan: eat target=t7
   Tag 1 00:48 eat: ok
-**Tag 1 00:48** – _Die gelbe Frucht tut gut, Durst ist nur noch leicht. Ich schaue mir jetzt die nächsten Orte an, vielleicht finde ich Süßwasser, und nehme noch eine Frucht mit._ (Ziel: Süßwasser finden und die Insel erkunden)
+**Tag 1 00:48** – _Die gelben Früchte helfen gegen Hunger und Durst, der Durst ist nur noch gering. Ich esse noch eine und sehe mir dann den nächsten Ort p4 an, vielleicht gibt es dort Süßwasser._ (Ziel: Durst ganz stillen und Süßwasser finden)
   Plan: eat target=t7 → move to=p4
   Tag 1 00:58 eat: ok
   Tag 1 01:10 move: ok
-**Tag 1 01:11** – _Hier bei p4 fließt kleines, klares Wasser. Anders als das Meer könnte es süß sein, ich probiere vorsichtig davon._ (Ziel: Süßwasser finden und trinken)
+**Tag 1 01:11** – _Hier bei p4 fließt kleines, klares Wasser. Anders als das Meer ist es vielleicht süß. Ich probiere vorsichtig einen Schluck._ (Ziel: Süßwasser finden und den Durst stillen)
   Plan: drink target=t4
   Tag 1 01:16 drink: ok
-**Tag 1 01:16** – _Das Wasser hier ist frisch, und mein Durst ist weg. Jetzt weiß ich, wo ich Süßwasser bekomme, und gelbe Früchte gibt es nebenan bei p3. Es ist dunkel, ich sollte mir bald einen geschützten Platz zum Schlafen suchen._ (Ziel: Einen geschützten Schlafplatz finden und die Insel weiter erkunden)
-  Plan: move to=p3
-  Tag 1 01:28 move: ok
-**Tag 1 01:29** – _Durst und Hunger sind gestillt, und p3 ist geschützt und hat weichen Boden. Es ist dunkel, hier lege ich mich schlafen._ (Ziel: Einen geschützten Schlafplatz finden und ausruhen)
-  Plan: sleep
-**Tag 1 06:00** – _Ich habe gut geschlafen und fühle mich frisch, nichts drückt. Ich schaue mir die unbekannten Orte an, zuerst p5, das von hier aus erreichbar ist. Vielleicht finde ich dort noch mehr Nützliches._ (Ziel: Die Insel weiter erkunden, p5 ansehen)
+**Tag 1 01:16** – _Das Wasser hier ist frisch und hat meinen Durst gestillt, hier habe ich eine sichere Trinkstelle. Jetzt ist alles gut, nur ist es dunkel. Ich merke mir den Weg: p4 für Wasser, p3 für gelbe Früchte, und ruhe mich kurz aus._ (Ziel: Ausruhen und die Insel bei Tageslicht weiter erkunden)
+  Plan: rest minutes=10
+**Tag 1 01:26** – _Durst und Hunger sind weg, ich bin nicht müde, aber es ist noch dunkel. Ich warte hier am Wasser ein bisschen, bis es hell wird, dann erkunde ich die unbekannten Orte._ (Ziel: Bei Tageslicht die Insel weiter erkunden)
+  Plan: rest minutes=30
+**Tag 1 01:56** – _Es ist noch dunkel, aber ich bin kaum müde und satt. Ich nutze die Zeit und sehe mir die rote Frucht in p3 an, bevor es hell wird, und merke mir den Weg zurück zum Wasser._ (Ziel: Die Insel erkunden und herausfinden, was die roten Früchte sind)
+  Plan: move to=p3 → idle minutes=5
+  Tag 1 02:08 move: ok
+**Tag 1 02:13** – _Ich bin wieder bei p3 und es ist noch dunkel. Die roten Früchte kenne ich noch nicht, ich probiere vorsichtig eine davon und achte darauf, ob mir schlecht wird._ (Ziel: Herausfinden, was die roten Früchte sind)
+  Plan: eat target=t8
+  Tag 1 02:23 eat: ok
+**Tag 1 02:23** – _Die rote Frucht schmeckt bitter und sättigt kaum, aber mir ist nicht schlecht geworden. Ich warte kurz ab, ob sich etwas im Körper tut, und ruhe mich bis zum Morgen aus._ (Ziel: Beobachten, ob die roten Früchte schaden, und bei Tageslicht die Insel erkunden)
+  Plan: rest minutes=20
+**Tag 1 02:43** – _Mir ist nicht schlecht geworden, die rote Frucht scheint harmlos. Es ist noch dunkel, also sehe ich mir p5 an, das ich noch nicht kenne, und behalte den Weg zum Wasser im Kopf._ (Ziel: Die unbekannten Orte erkunden, zum Beispiel p5)
   Plan: move to=p5
-  Tag 1 06:07 move: ok
-**Tag 1 06:08** – _Hier bei p5 gibt es Muscheln an den Felsen und viele lose Steine. Ich nehme mir einen Stein mit, vielleicht kann ich damit etwas anfangen. Dann schaue ich mir p6 an._ (Ziel: Die Insel weiter erkunden, p6 ansehen)
-  Plan: take source=t12 → move to=p6
-  Tag 1 06:12 take: ok
-  Tag 1 06:16 move: ok
-**Tag 1 06:17** – _Hier bei p6 ist wieder Meer, und viele kleine Tiere flitzen im Wasser. Ich habe keinen Durst und keinen Hunger, also schaue ich mir die Tiere genauer an und gehe dann weiter, vielleicht zu p7, das ich noch nicht kenne._ (Ziel: Die Insel weiter erkunden, p7 ansehen)
-  Plan: move to=p1 → move to=p7
-  Tag 1 06:19 move: ok
-  Tag 1 06:23 move: ok
-**Tag 1 06:24** – _Bei p7 liegen viele angeschwemmte Holzstücke und lose Steine. Ich habe weder Durst noch Hunger, also probiere ich aus, was sich mit Holz und Stein anfangen lässt, und nehme ein Stück Holz mit._ (Ziel: Mit Holz und Stein experimentieren, Nützliches herstellen)
-  Plan: take source=t14 → rub item=i2 against=t14
-  Tag 1 06:28 take: ok
-**Tag 1 06:29** – _Ich halte einen Stein (i2) und ein Stück Holz (i3), aber das Reiben gegen t14 ging nicht, weil das Ding am Boden liegt. Ich reibe stattdessen die beiden Stücke in meiner Hand aneinander und schaue, was passiert._ (Ziel: Mit Holz und Stein experimentieren, Nützliches herstellen)
+  Tag 1 02:54 move: ok
+**Tag 1 02:55** – _Ich bin bei p5 am Meer, zwischen Felsen mit Muscheln und vielen losen Steinen. Es ist noch dunkel, also sehe ich mir die Steine genauer an und nehme einen mit, vielleicht ist er später nützlich._ (Ziel: Die Umgebung bei p5 erkunden und bei Tageslicht die unbekannten Orte p6 und p7 ansehen)
+  Plan: take source=t12
+  Tag 1 02:59 take: ok
+**Tag 1 02:59** – _Ich habe einen Stein aus p5 genommen, jetzt halte ich zwei Steine und ein großes Blatt. Es ist noch dunkel, also sehe ich mir die Muscheln an und schaue dann, was bei p6 liegt._ (Ziel: Die Umgebung erkunden und bei Tageslicht p6 und p7 ansehen)
+  Plan: take source=t11 → move to=p6
+  Tag 1 03:03 take: fehlgeschlagen (nothing_loose)
+**Tag 1 03:03** – _Die Muscheln lassen sich nicht einfach nehmen, sie sitzen wohl fest am Fels. Ich halte schon zwei Steine, vielleicht kann ich eine Muschel damit lösen. Aber es ist noch dunkel, also sehe ich erst bei p6 nach._ (Ziel: Die Muscheln erreichen und p6 erkunden)
+  Plan: move to=p6
+  Tag 1 03:09 move: ok
+**Tag 1 03:10** – _Ich bin bei p6 am Wasser, hier wimmeln viele kleine Tiere im Wasser. Ich gehe zurück zu p5 und versuche, mit dem Stein eine Muschel vom Fels zu lösen._ (Ziel: Eine Muschel vom Fels lösen und herausfinden, ob man sie essen kann)
+  Plan: move to=p5 → take source=t11
+  Tag 1 03:16 move: ok
+  Tag 1 03:20 take: fehlgeschlagen (nothing_loose)
+**Tag 1 03:20** – _Die Muscheln sitzen fest am Fels, mit bloßer Hand geht es nicht. Ich halte zwei Steine, vielleicht kann ich damit gegen die Muscheln schlagen. Mein Plan erlaubt aber nur Reiben, also reibe ich den runden Stein an einem losen Stein und sehe, was passiert._ (Ziel: Eine Muschel vom Fels lösen und herausfinden, ob man sie essen kann)
+  Plan: take source=t12 → rub item=i2 against=t11
+  ⟳ Komme nicht weiter mit „Muscheln mit bloßer Hand nehmen“, ändere: method
+  Tag 1 03:24 take: ok
+**Tag 1 03:25** – _Das Reiben ging schief, weil ich t11, die Muscheln am Fels, gar nicht halten kann. Ich halte ja nur die beiden Steine und das Blatt. Also reibe ich die beiden Steine aneinander und schaue, was passiert._ (Ziel: Eine Muschel vom Fels lösen und herausfinden, ob man sie essen kann)
   Plan: rub item=i2 against=i3
-  Tag 1 06:49 rub: nothing
-**Tag 1 06:49** – _Das Reiben von Stein an Holz hat nichts bewirkt. Vielleicht brauche ich trockenes, faseriges Zeug oder zwei Holzstücke; ich nehme noch ein Stück Holz und probiere Holz an Holz._ (Ziel: Mit Holz und Stein experimentieren, Nützliches herstellen)
-  Plan: take source=t14 → rub item=i3 against=i2
-  Tag 1 06:53 take: ok
-  Tag 1 07:13 rub: nothing
-**Tag 1 07:13** – _Stein an Holz hat nichts gebracht. Jetzt probiere ich Holz an Holz, ich halte ja zwei Stücke._ (Ziel: Mit Holz und Stein experimentieren, Nützliches herstellen)
-  Plan: rub item=i3 against=i4
-  Tag 1 07:33 rub: smoke
-**Tag 1 07:33** – _Rauch steigt auf, wenn ich Holz an Holz reibe! Vielleicht entsteht Glut oder Feuer, wenn ich weiterreibe, und trockene Blätter könnten helfen. Ich reibe noch einmal weiter._ (Ziel: Feuer machen: Holz weiter aneinander reiben)
-  Plan: rub item=i3 against=i4
-  Tag 1 07:53 rub: smoke
-**Tag 1 07:53** – _Es qualmt immer noch, aber noch kein Feuer. Ich reibe weiter, und wenn Glut entsteht, lege ich trockene Blätter dazu, die ich in der Hand halte._ (Ziel: Feuer machen: Holz weiter aneinander reiben)
-  Plan: rub item=i3 against=i4 → rub item=i3 against=i4
-  Tag 1 08:13 rub: smoke
-  Tag 1 08:33 rub: smoke
-**Tag 1 08:33** – _Es qualmt weiter, aber es kommt keine Glut. Vielleicht muss ich das trockene Blatt als Zunder darunterlegen und dann weiterreiben, mal sehen._ (Ziel: Feuer machen: Glut mit trockenem Blatt als Zunder)
-  Plan: put item=i1 → rub item=i3 against=i4
-**Tag 1 08:34** – _Das Blatt konnte ich nicht einfach ablegen, die Welt kennt dieses Ding nicht. Ich reibe die beiden Hölzer weiter, es qualmt ja immer wieder, und vielleicht entsteht mit etwas Geduld doch Glut._ (Ziel: Feuer machen: Holz weiter aneinander reiben)
-  Plan: rub item=i3 against=i4 → rub item=i3 against=i4
-  Tag 1 08:54 rub: smoke
-  Tag 1 09:14 rub: nothing
-**Tag 1 09:14** – _Es regnet, ich werde nass, und die Hölzer sind feucht. Das Reiben bringt bei dem Wetter wohl nichts mehr. Ich gehe zu p3, wo es geschützt ist und trockenes Holz und Blätter liegen, und versuche es dort mit trockenem Zeug._ (Ziel: Im Schutz trockenes Holz holen und dort Feuer versuchen)
-  Plan: move to=p3 → drop item=i3 → drop item=i4 → take source=t10 → take source=t10
-  Tag 1 09:19 move: ok
-  Tag 1 09:26 move: ok
-  Tag 1 09:27 drop: ok
-**Tag 1 09:27** – _Ich habe i3 abgelegt und bin im Schutz von p3. Das Holz hier ist auch feucht, aber ich tausche das nasse i4 gegen frische Stücke und probiere es noch einmal._ (Ziel: Im Schutz Holz holen und Feuer versuchen)
-  Plan: drop item=i4 → take source=t10 → take source=t10
-  Tag 1 09:28 drop: ok
-  Tag 1 09:32 take: ok
-  Tag 1 09:36 take: ok
-**Tag 1 09:36** – _Ich bin im Schutz von p3 und halte frische Stöcke, aber alles ist feucht und ich bin ziemlich nass. Ich probiere es trotzdem mit Holz an Holz, vielleicht klappt es hier besser als draußen im Regen._ (Ziel: Im Schutz Feuer durch Reiben versuchen)
-  Plan: rub item=i5 against=i6
-  Tag 1 09:56 rub: warm
-**Tag 1 09:56** – _Das Holz wurde warm, aber es kam kein Rauch wie vorhin. Ich reibe weiter, vielleicht wird es heißer, auch wenn alles feucht ist._ (Ziel: Im Schutz Feuer durch Reiben versuchen)
-  Plan: rub item=i5 against=i6
-  Tag 1 10:16 rub: warm
-**Tag 1 10:16** – _Das Holz wird warm, aber alles ist feucht, und ich bin klatschnass. Ich reibe noch ein bisschen weiter und hoffe, dass es hier im Schutz doch Rauch gibt._ (Ziel: Im Schutz Feuer durch Reiben versuchen)
-  Plan: rub item=i5 against=i6
-  Tag 1 10:36 rub: warm
-**Tag 1 10:36** – _Das feuchte Holz wird nur warm und bringt keinen Rauch. Ich lege die nassen Stöcke weg und nehme das trockene Laub von p2, vielleicht hilft trockeneres Material später._ (Ziel: Trockenes Material für einen neuen Feuerversuch holen)
-  Plan: drop item=i5 → drop item=i6 → move to=p2 → take source=t6
-  Tag 1 10:37 drop: ok
-  Tag 1 10:38 drop: ok
-  Tag 1 10:43 move: ok
-  Tag 1 10:47 take: ok
-**Tag 1 10:47** – _Ich bin klatschnass und halte jetzt Blätter in der Hand. Ich suche mir ein trockeneres Plätzchen im Schutz von p3 und warte dort, bis es weniger nass ist._ (Ziel: Im Schutz trocken werden und Material für Feuer sammeln)
-  Plan: move to=p3 → rest minutes=20
-  Tag 1 10:52 move: ok
-**Tag 1 11:12** – _Ich bin immer noch ziemlich nass, aber hier im Schutz von p3 regnet es nicht. Ich ruhe noch etwas, bis ich trockener bin, und halte die Blätter bereit._ (Ziel: Im Schutz trocken werden und Material für Feuer trocken halten)
-  Plan: rest minutes=30
-**Tag 1 11:42** – _Ich bin noch nass, aber der Durst meldet sich. Das frische Wasser bei p4 hat gut getan, also gehe ich dorthin und trinke._ (Ziel: Frisches Wasser trinken)
-  Plan: move to=p4 → drink target=t4
-  Tag 1 11:50 move: ok
-  Tag 1 11:55 drink: ok
-**Tag 1 11:55** – _Das frische Wasser hat den Durst gestillt. Ich bin noch etwas nass, also gehe ich zurück in den Schutz von p3 und ruhe dort, bis ich trockener bin._ (Ziel: Im Schutz trocken werden und Material für Feuer trocken halten)
-  Plan: move to=p3 → rest minutes=30
-  Tag 1 12:03 move: ok
-**Tag 1 12:33** – _Ich bin kaum noch nass, Durst und Hunger sind weg. Jetzt sammle ich trockenes Material hier im Schutz, die langen zähen Blätter und trockenen Stöcke, für einen neuen Feuerversuch._ (Ziel: Trockenes Material für Feuer sammeln)
-  Plan: take source=t10 → take source=t9
-  Tag 1 12:37 take: ok
-  Tag 1 12:41 take: fehlgeschlagen (hands_full)
-**Tag 1 12:41** – _Meine Hände sind voll, ich kann die langen zähen Blätter nicht mehr nehmen. Ich lege den großen Stein ab, der beim Feuermachen nichts gebracht hat, und versuche es dann nochmal._ (Ziel: Trockenes Material für Feuer sammeln)
-  Plan: drop item=i2 → take source=t9
-  Tag 1 12:42 drop: ok
-  Tag 1 12:46 take: ok
-**Tag 1 12:46** – _Jetzt habe ich trockene Blätter, einen trockenen Stock und einen Faserstreifen in der Hand. Ich reibe den trockenen Stock an einem weiteren trockenen Stück, vielleicht gibt es diesmal Rauch._ (Ziel: Mit trockenem Material Feuer durch Reiben versuchen)
-  Plan: rub item=i8 against=i9
-  Tag 1 13:06 rub: nothing
-**Tag 1 13:06** – _Der Stock am Faserstreifen hat nichts gebracht. Beim ersten Mal stieg Rauch auf, als ich zwei Hölzer in p7 aneinander gerieben habe. Ich lege den Faserstreifen weg, nehme noch einen trockenen Stock und reibe die beiden Hölzer aneinander._ (Ziel: Mit zwei trockenen Stöcken Feuer durch Reiben versuchen)
-  Plan: drop item=i9 → take source=t10 → rub item=i8 against=i10
-  Tag 1 13:07 drop: ok
-  Tag 1 13:11 take: ok
-  Tag 1 13:31 rub: smoke
-**Tag 1 13:31** – _Rauch steigt auf, als ich die beiden trockenen Stöcke aneinander reibe! Ich reibe noch einmal weiter, vielleicht entsteht jetzt Glut, und halte die trockenen Blätter bereit._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: rub item=i8 against=i10
-  Tag 1 13:51 rub: smoke
-**Tag 1 13:51** – _Schon wieder steigt Rauch auf, aber noch keine Glut. Ich reibe weiter, vielleicht muss ich länger reiben, und halte die trockenen Blätter bereit._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: rub item=i8 against=i10 → rub item=i8 against=i10
-  Tag 1 14:11 rub: smoke
-  Tag 1 14:31 rub: smoke
-**Tag 1 14:31** – _Immer wieder Rauch, aber keine Glut. Ich reibe weiter, die Blätter halte ich bereit, vielleicht braucht es einfach Ausdauer._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: rub item=i8 against=i10 → rub item=i8 against=i10
-  Tag 1 14:51 rub: smoke
-  Tag 1 15:11 rub: smoke
-**Tag 1 15:11** – _Seit über anderthalb Stunden steigt nur Rauch auf, nie Glut. Vielleicht fehlt etwas Zunder: ich lege den kurzen spitzen Stock auf die trockenen Blättern ab und reibe mit einem anderen Winkel weiter. Ich bin auch müde, aber ich probiere es noch einmal._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: rub item=i8 against=i10
-  Tag 1 15:31 rub: smoke
-**Tag 1 15:31** – _Seit Stunden nur Rauch, keine Glut, und ich werde müde. Vielleicht bringt das Reiben nichts mehr; ich lege die Blätter als Unterlage bereit und ruhe mich kurz aus, dann versuche ich es mit frischen Kräften._ (Ziel: Ausruhen und danach Feuer entfachen)
-  Plan: rest minutes=30
-**Tag 1 16:01** – _Nach all dem Reiben nur Rauch, keine Glut. Vielleicht hilft es, die trockenen Blätter als Zunder unter die Stelle zu legen, an der ich reibe, und es nochmal zu versuchen._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: put item=i7 onto=t10 → rub item=i8 against=i10
-  Tag 1 16:03 put: fehlgeschlagen (not_here)
-**Tag 1 16:03** – _Das Ablegen auf t10 ging nicht, weil die Hölzer offenbar nicht mehr hier liegen; ich habe nur Stöcke in der Hand. Ich lege die Blätter lieber irgendwo hier ab und reibe dann noch einmal, vielleicht entsteht Glut im Laub._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: rub item=i8 against=i10
-  Tag 1 16:23 rub: smoke
-**Tag 1 16:23** – _Immer nur Rauch, nie Glut. Beim ersten Mal wurde etwas warm, als ich andere Dinge gerieben habe; vielleicht klappt es mit einer anderen Kombination besser. Ich lege die Blätter ab und probiere es mit dem langen Stock und den langen zähen Blättern._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: drop item=i7 → rub item=i8 against=i10
-  Tag 1 16:24 drop: ok
-  Tag 1 16:44 rub: smoke
-**Tag 1 16:44** – _Seit Stunden nur Rauch, und ich bin müde. Beim ersten Mal wurde es warm, als ich i5 an i6 gerieben habe, also probiere ich eine andere Kombination: die langen zähen Blätter von t9 nehmen und daran reiben._ (Ziel: Aus dem Rauch ein Feuer entfachen)
-  Plan: drop item=i1 → take source=t9 → rub item=i8 against=i10
-  Tag 1 16:45 drop: ok
-  Tag 1 16:49 take: ok
-  Tag 1 17:09 rub: glow
-**Tag 1 17:09** – _Endlich glühender Staub, und da ist ein winziges Glimmen bei f1! Ich muss es vorsichtig füttern, mit trockenen Blättern und kleinen Stöcken, damit es nicht ausgeht._ (Ziel: Das Glimmen zu einem Feuer anfachen)
-  Plan: put item=i11 onto=f1
-  Tag 1 17:11 put: flared up
-**Tag 1 17:11** – _Das Feuer ist aufgeflackert, es brennt niedrig und warm. Ich will es füttern, damit es nicht ausgeht. Ich lege den kurzen trockenen Stock darauf, und danach hole ich mehr trockene Stöcke._ (Ziel: Das Feuer am Leben halten)
-  Plan: put item=i10 onto=f1 → take source=t10
-  Tag 1 17:13 put: burns
-**Tag 1 17:13** – _Es brennt! Ich habe das Feuer mit Blättern und einem Stock gefüttert. Jetzt hole ich mehr trockene Stöcke, damit es nicht ausgeht, und ruhe mich dann in seiner Wärme aus._ (Ziel: Das Feuer am Leben halten)
-  Plan: take source=t10 → put item=t10 onto=f1
-  Tag 1 17:17 take: ok
-**Tag 1 17:18** – _Ich habe t10 gerade genommen, aber das Stück ist anscheinend ein anderes Ding in meiner Hand. Ich halte noch i8 und i12, also lege ich einfach i12 aufs Feuer und halte es am Leben._ (Ziel: Das Feuer am Leben halten)
-  Plan: put item=i12 onto=f1 → take source=t10 → rest minutes=20
-  Tag 1 17:20 put: burns
-  Tag 1 17:24 take: ok
-**Tag 1 17:44** – _Das Feuer brennt noch niedrig, und ich bin müde. Ich lege die beiden trockenen Stöcke nacheinander auf f1, damit es durch die Nacht hält._ (Ziel: Das Feuer am Leben halten)
-  Plan: put item=i8 onto=f1 → put item=i13 onto=f1 → take source=t10 → rest minutes=20
-  Tag 1 17:46 put: burns
-  Tag 1 17:48 put: burns
-  Tag 1 17:52 take: fehlgeschlagen (none_left)
-**Tag 1 17:52** – _Die trockenen Stöcke hier sind aufgebraucht, aber das Feuer brennt hoch und warm. Ich bin müde; unten am Strand liegt viel angeschwemmtes Holz, das ist zwar nass, aber morgen kann ich neues holen. Jetzt ruhe ich am Feuer._ (Ziel: Das Feuer am Leben halten und mich ausruhen)
-  Plan: rest minutes=30
-**Tag 1 18:22** – _Das Feuer brennt hoch und warm, und ich bin müde. Hier gibt es kein trockenes Holz mehr, also schlafe ich jetzt am Feuer und hole morgen neues Holz._ (Ziel: Schlafen und das Feuer morgen weiter am Leben halten)
-  Plan: sleep
-- Tag 1 19:55 fire.out {"fire":"f1","from":"flame"}
-- Tag 2 00:00 weather.day {"weather":"rain","previous":"cloudy"}
-**Tag 2 06:00** – _Ich bin nass bis auf die Haut, es ist hell geworden, und der Durst meldet sich. Erst trinke ich am kleinen Bach bei p4, dann hole ich Holz und halte das Feuer in Gang._ (Ziel: Durst stillen und neues Holz fürs Feuer holen)
-  Plan: move to=p4 → drink target=t4 → drink target=t4 → move to=p3
-  Tag 2 06:08 move: ok
-  Tag 2 06:13 drink: ok
-  Tag 2 06:18 drink: ok
-  Tag 2 06:26 move: ok
-**Tag 2 06:27** – _Ich bin klatschnass, aber der Durst ist weg. Das Feuer ist wohl heruntergebrannt, nur Asche liegt noch bei f1. Ich hole am Strand angeschwemmtes Holz und Blätter, um es neu zu entfachen und mich zu wärmen._ (Ziel: Holz holen, das Feuer wieder entfachen und trocknen)
-  Plan: move to=p7 → take source=t14 → take source=t14 → move to=p3
-  Tag 2 06:34 move: ok
-  Tag 2 06:39 move: ok
-  Tag 2 06:43 take: ok
-  Tag 2 06:47 take: ok
-  Tag 2 06:52 move: ok
-  Tag 2 06:59 move: ok
-**Tag 2 07:00** – _Ich habe nasses Holz geholt, aber das Feuer ist nur noch Asche. Nasses Holz brennt schlecht, also lege ich es neben die Asche zum Trocknen und prüfe, ob noch Glut da ist._ (Ziel: Das Feuer wieder entfachen und mich trocknen)
-  Plan: put item=i15 onto=f1 → rest minutes=10
-  Tag 2 07:02 put: nothing
-**Tag 2 07:02** – _Das nasse Holz auf der Asche tut nichts, das Feuer ist wirklich aus. Ich muss es neu entfachen, indem ich Hölzer aneinander reibe, wie gestern. Dazu brauche ich trockenere Stücke, und die lege ich besser neben die Asche zum Trocknen._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: drop item=i15 → rub item=i14 against=i15
-**Tag 2 07:03** – _Ich halte nur noch i14, i15 ist gar nicht in meiner Hand. Das Holz ist nass und die Asche tot; ich lege i14 neben die Asche zum Trocknen und warte kurz._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: drop item=i14 → take source=t6
-  Tag 2 07:04 drop: ok
-  Tag 2 07:09 move: ok
-  Tag 2 07:13 take: ok
-**Tag 2 07:13** – _Ich habe wieder ein großes nasses Blatt genommen, es regnet nicht mehr und ich bin noch nass. Ich gehe zurück zu p3 und lege das Blatt als Unterlage neben die Asche. Dann suche ich trockenere Stücke zum Reiben._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: move to=p3 → rest minutes=20
-  Tag 2 07:18 move: ok
-**Tag 2 07:38** – _Ich bin noch etwas nass, aber nicht durstig oder hungrig. Ich lege das große Blatt neben die Asche als Unterlage und probiere nachher, ob sich aus den feuchten Stücken am Strand Glut gewinnen lässt._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: drop item=i16 → rest minutes=30
-  Tag 2 07:39 drop: ok
-**Tag 2 08:09** – _Ich bin kaum noch nass, und Durst und Hunger sind weg. Das Holz am Strand ist zu nass, also hole ich Holz und Blätter und probiere es später neu. Vorerst esse ich noch etwas vom gelben Busch, um bei Kräften zu bleiben._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: take source=t7 → eat target=t7
-  Tag 2 08:13 take: fehlgeschlagen (nothing_loose)
-**Tag 2 08:13** – _Der gelbe Busch hat gerade nichts mehr zum Nehmen, und ich habe weder Hunger noch Durst. Ich bin noch etwas nass, also gehe ich zum Strand und suche Holz, das vielleicht schon trockener ist. Mit dem Feuer versuche ich es später noch einmal._ (Ziel: Trockenes Holz finden und das Feuer neu entfachen)
-  Plan: move to=p5 → move to=p7 → take source=t14
-  Tag 2 08:20 move: ok
-  Tag 2 08:25 move: ok
-  Tag 2 08:29 take: ok
-**Tag 2 08:29** – _Ich habe wieder Holz vom Strand genommen, es ist aber nass. Ich bringe es nach p3 und versuche, Hölzer aneinander zu reiben, um Glut zu bekommen._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: move to=p5 → move to=p3 → rest minutes=20
-  Tag 2 08:34 move: ok
-  Tag 2 08:41 move: ok
-**Tag 2 09:01** – _Ich halte wieder ein nasses Holzstück, und es regnet leicht. Das Feuer ist aus. Ich lege das Holz neben die Asche und warte, bis es trockener wird, dann probiere ich das Reiben._ (Ziel: Das Feuer neu entfachen und mich trocknen)
-  Plan: drop item=i17 → rest minutes=30
-  Tag 2 09:02 drop: ok
-**Tag 2 09:32** – _Es regnet leicht und ich werde wieder nasser, obwohl ich hier geschützt stehe. Ich suche Unterschlupf und warte, bis der Regen aufhört. Dann probiere ich das Feuer erneut._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: move to=p4 → rest minutes=30
-  Tag 2 09:40 move: ok
-**Tag 2 10:10** – _Ich bin klatschnass, obwohl ich hier unter teilweiser Deckung stehe. Es regnet weiter, also gehe ich zurück nach p3, wo es geschützt ist, und warte dort, bis der Regen aufhört._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: move to=p3 → rest minutes=30
-  Tag 2 10:18 move: ok
-**Tag 2 10:48** – _Ich bin klatschnass, aber weder durstig noch hungrig. Hier ist es geschützt, doch der Regen macht mich trotzdem nass. Ich warte noch ein Weilchen, bis es aufhört, dann hole ich Holz und versuche das Feuer neu._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: rest minutes=30
-**Tag 2 11:18** – _Ich bin immer noch klatschnass, obwohl es nicht mehr regnet und die Sonne verschleiert scheint. Vielleicht trockne ich besser am offenen Strand in der Sonne, wo mehr Licht hinkommt._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: move to=p5 → move to=p7 → rest minutes=30
-  Tag 2 11:25 move: ok
-  Tag 2 11:30 move: ok
-**Tag 2 12:00** – _Es regnet wieder und ich bin klatschnass, obwohl ich am offenen Strand stehe. Ich gehe zurück nach p5, wo es geschützt ist, und warte dort, bis der Regen nachlässt._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: move to=p5 → rest minutes=30
-  Tag 2 12:05 move: ok
-**Tag 2 12:35** – _Ich bin immer noch klatschnass, und es regnet weiter. Ich bleibe hier im Schutz und ruhe mich aus, bis der Regen nachlässt._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: rest minutes=30
-**Tag 2 13:05** – _Ich bin immer noch klatschnass und es regnet weiter, obwohl ich im Schutz sitze. Ich warte hier noch etwas ab, mir ist nicht kalt, und Durst und Hunger sind weg._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: rest minutes=30
-**Tag 2 13:35** – _Ich bin klatschnass, aber mir ist nicht kalt, und Durst und Hunger sind weg. Im Regen wird alles nur nasser, also ruhe ich weiter und warte, bis es aufhört._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: rest minutes=30
-**Tag 2 14:05** – _Es regnet nicht mehr, aber ich bin immer noch klatschnass. Ich gehe zum offenen Strand p1, wo etwas Licht und Wind sind, und lasse mich dort trocknen._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: move to=p1 → idle minutes=30
-  Tag 2 14:11 move: ok
-**Tag 2 14:41** – _Es regnet nicht mehr, aber ich bin noch nass, mir ist aber nicht kalt. Ich bleibe hier am offenen Strand im leichten Wind und lasse mich trocknen, danach hole ich trockenes Holz fürs Feuer._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: idle minutes=30
-**Tag 2 15:11** – _Ich bin noch immer nass, aber nicht kalt, und die Müdigkeit steigt langsam. Ich bleibe noch etwas im leichten Wind am Strand und lasse mich trocknen, dann sehe ich weiter._ (Ziel: Trocken werden und das Feuer später neu entfachen)
-  Plan: idle minutes=30
-**Tag 2 15:41** – _Ich bin noch etwas nass, aber nicht kalt, und der Hunger meldet sich leicht. Ich gehe zum Busch mit den weichen gelben Früchten, die haben mir schon geholfen, und esse dort._ (Ziel: Hunger stillen, dann trocken werden und Feuer neu entfachen)
+  Tag 1 03:45 rub: nothing
+**Tag 1 03:45** – _Das Reiben der beiden Steine hat nichts bewirkt, kein Funke, nichts. Ich lasse die Muscheln erst einmal und probiere etwas anderes: Ich nehme Blätter und Stöcke aus p3 mit und schaue, ob sich damit etwas anfangen lässt._ (Ziel: Mit den Materialien von p3 etwas Nützliches ausprobieren, zum Beispiel Stöcke und Blätter verbinden)
+  Plan: move to=p3 → take source=t10 → take source=t9
+  ⟳ Komme nicht weiter mit „Zwei Steine aneinander reiben, um etwas zu bewirken“, ändere: material
+  Tag 1 03:56 move: ok
+  Tag 1 04:00 take: ok
+  Tag 1 04:04 take: fehlgeschlagen (hands_full)
+**Tag 1 04:04** – _Meine Hände sind voll: zwei Steine, das große Blatt und der Stock. Mir ist etwas übel, also lege ich den runden Stein ab und probiere dann, die zähen Blätter zu nehmen, um etwas zu binden._ (Ziel: Mit Stock, Blättern und Steinen etwas Nützliches bauen oder binden)
+  Plan: drop item=i2 → take source=t9 → rest minutes=10
+  Tag 1 04:05 drop: ok
+**Tag 1 04:05** – _Jetzt ist eine Hand frei, ich versuche die zähen Blättern zu nehmen. Mir ist noch übel, danach ruhe ich kurz aus._ (Ziel: Mit Stock, Blättern und Steinen etwas Nützliches binden oder bauen)
+  Plan: take source=t9 → rest minutes=10
+  Tag 1 04:09 take: ok
+**Tag 1 04:19** – _Mir ist noch übel, aber ich halte jetzt Blatt, scharfen Stein, Stock und Faserstreifen. Ich binde den scharfen Stein an den langen Stock und habe so vielleicht ein Werkzeug, mit dem ich Muscheln lösen kann._ (Ziel: Ein Werkzeug aus Stock und scharfem Stein binden, um Muscheln zu lösen)
+  Plan: bind items=i4+i3 binder=i5 → rest minutes=10
+  Tag 1 04:39 bind: ok
+**Tag 1 04:39** – _Der scharfe Stein sitzt jetzt fest am langen Stock, ein schweres Werkzeug mit Spitze. Mir ist noch übel, aber ich gehe damit zu den Muscheln bei p5 und versuche, eine vom Fels zu lösen._ (Ziel: Mit dem neuen Werkzeug eine Muschel vom Fels lösen und prüfen, ob man sie essen kann)
+  Plan: move to=p5 → take source=t11
+  Tag 1 04:50 move: ok
+  Tag 1 04:54 take: fehlgeschlagen (nothing_loose)
+**Tag 1 04:54** – _Die Muscheln lassen sich auch mit dem Werkzeug nicht einfach nehmen, 'nichts zu nehmen' kommt immer wieder. Vielleicht muss ich sie mit der Spitze lösen, also versuche ich es mit eat und dem Werkzeug als tool, falls das geht. Mir ist noch übel, also esse ich erst mal nichts Neues._ (Ziel: Eine Muschel mit dem Speer vom Fels lösen und prüfen, ob man sie essen kann)
+  Plan: eat target=t11 tool=i6
+  ⟳ Komme nicht weiter mit „Muscheln mit der Hand nehmen“, ändere: method
+  Tag 1 05:14 eat: ok
+**Tag 1 05:14** – _Mit dem Speer habe ich die Muschel gegessen: salzig, weich, der Hunger ist kaum weg. Mir ist weiter übel und ich bin müde, also ruhe ich etwas aus, bevor ich mehr probiere._ (Ziel: Übelkeit abklingen lassen und ausruhen, danach mit dem Speer mehr Muscheln essen)
+  Plan: rest minutes=15
+**Tag 1 08:45** – _Ich habe geschlafen, Durst und Hunger sind weg, nur die Übelkeit ist noch da. Die Muscheln machen kaum satt, also gehe ich zu den gelben Früchten bei p3, die haben mir gut getan._ (Ziel: Etwas Sättigendes essen, die süßen gelben Früchte bei p3)
   Plan: move to=p3 → eat target=t7
-  Tag 2 15:44 move: ok
-  Tag 2 15:49 move: ok
-  Tag 2 15:59 eat: ok
-**Tag 2 15:59** – _Die gelben Früchte haben wieder geholfen, Hunger und Durst sind weg. Ich bin noch etwas nass und müde, also ruhe ich hier im Schutz und lasse mich weiter trocknen._ (Ziel: Trocken werden, ausruhen und später das Feuer neu entfachen)
-  Plan: rest minutes=30
-**Tag 2 16:29** – _Ich bin nur noch leicht nass und die Müdigkeit steigt. Es ist später Nachmittag, also schlafe ich hier im Schutz, damit ich morgen ausgeruht das Feuer neu machen kann._ (Ziel: Ausruhen und schlafen, morgen das Feuer neu entfachen)
+  Tag 1 08:52 move: ok
+  Tag 1 09:02 eat: ok
+**Tag 1 09:02** – _Die gelben Früchte schmecken süß und machen satt, Durst und Hunger sind weg. Nur die Übelkeit bleibt, also ruhe ich kurz hier im Schutz aus und schaue dann weiter._ (Ziel: Übelkeit abklingen lassen und dann die Insel weiter erkunden, vor allem p7)
+  Plan: rest minutes=15
+**Tag 1 09:17** – _Durst und Hunger sind weg, nur die Übelkeit und die Nässe vom Regen stören noch. Ich bleibe im Schutz und gehe dann nach p7, das ich noch nicht kenne, um mehr von der Insel zu sehen._ (Ziel: Die Insel weiter erkunden, vor allem p7)
+  Plan: move to=p5 → move to=p7
+  Tag 1 09:24 move: ok
+  Tag 1 09:29 move: ok
+**Tag 1 09:30** – _Ich bin jetzt in p7, es regnet und ich bin ziemlich nass. Hier liegt viel angespültes Holz und lose Steine; ich nehme ein Stück Holz mit, um es mir genauer anzusehen._ (Ziel: p7 erkunden und herausfinden, ob das angespülte Holz nützlich ist)
+  Plan: take source=t14
+  Tag 1 09:34 take: ok
+**Tag 1 09:34** – _Ich bin klatschnass und es regnet weiter, obwohl mir nicht kalt ist. Das nasse Holz habe ich in der Hand; ich gehe zurück in den Schutz bei p5 und warte dort, bis der Regen nachlässt._ (Ziel: Im Schutz trocken werden und das Holz später genauer prüfen)
+  Plan: move to=p5 → rest minutes=15
+  Tag 1 09:39 move: ok
+**Tag 1 09:54** – _Ich bin nass, aber es ist nicht kalt, und im Schutz bei p5 regnet es nicht auf mich. Ich warte ein wenig, bis der Regen nachlässt, und schaue mir dann das nasse Holz genauer an._ (Ziel: Im Schutz trocken werden und das Holz später genauer prüfen)
+  Plan: rest minutes=20
+**Tag 1 10:14** – _Ich bin noch nass, aber es ist nicht kalt, und der Regen scheint vorbei. Ich habe die Nässe lange abgewartet; jetzt esse ich noch eine Muschel mit dem Speer, um den Magen zu prüfen, und lasse das Holz erst mal liegen._ (Ziel: Mit dem Speer eine Muschel essen und beobachten, ob die Übelkeit bleibt)
+  Plan: eat target=t11 tool=i6
+  Tag 1 10:34 eat: ok
+**Tag 1 10:34** – _Die Muschel war wieder salzig und weich, sie macht kaum satt. Ich bin immer noch nass, aber es ist nicht kalt; ich bleibe im Schutz und warte, bis die Übelkeit nachlässt._ (Ziel: Übelkeit abklingen lassen und trocken werden)
+  Plan: rest minutes=20
+**Tag 1 10:54** – _Ich bin noch nass und mir ist etwas übel, aber nicht kalt. Das Warten hilft kaum, also gehe ich zu den gelben Früchten bei p3, die haben mir gut getan, und esse dort noch eine._ (Ziel: Übelkeit lindern und mit den gelben Früchten satt bleiben)
+  Plan: move to=p3 → eat target=t7
+  Tag 1 11:01 move: ok
+  Tag 1 11:11 eat: ok
+**Tag 1 11:11** – _Ich habe gerade wieder die gelben Früchte gegessen, Hunger und Durst sind weg. Nur Nässe und leichte Übelkeit bleiben; ich bleibe im Schutz hier und ruhe mich aus, bis ich trockener bin._ (Ziel: Trocken werden und die Übelkeit abklingen lassen)
+  Plan: rest minutes=20
+**Tag 1 11:31** – _Ich bin immer noch etwas nass und mir ist leicht übel, aber Hunger und Durst sind weg. Ich habe ein Stück Holz in der Hand, das ich mir endlich genauer ansehen will. Ich lege es hier im Schutz ab und warte, bis ich trockener bin._ (Ziel: Trocken werden und das Holz genauer prüfen)
+  Plan: rest minutes=20
+**Tag 1 11:51** – _Ich bin immer noch etwas nass und mir ist leicht übel, aber Hunger und Durst sind weg. Ich lege das schwere, feuchte Holzstück hier ab und schaue, ob ich später damit etwas anfangen kann._ (Ziel: Trocken werden und das Holz genauer prüfen)
+  Plan: drop item=i7 → rest minutes=20
+  Tag 1 11:52 drop: ok
+**Tag 1 12:12** – _Ich bin noch etwas nass und mir ist leicht übel, aber Hunger und Durst sind fast weg. Ich nutze die Zeit und hole mir am Süßwasser bei p4 etwas zu trinken, solange es mir gut tut._ (Ziel: Frisches Wasser trinken und die Übelkeit abklingen lassen)
+  Plan: move to=p4 → drink target=t4
+  Tag 1 12:20 move: ok
+  Tag 1 12:25 drink: ok
+**Tag 1 12:25** – _Ich habe frisches Wasser getrunken, der Durst ist weg. Nässe und Übelkeit sind nur noch leicht, also sehe ich mir bei p3 die trockenen Stöcke und Blätter genauer an._ (Ziel: Trockenes Material bei p3 prüfen und sammeln)
+  Plan: move to=p3
+  Tag 1 12:33 move: ok
+**Tag 1 12:34** – _Durst und Hunger sind weg, nur Nässe und leichte Übelkeit bleiben. Ich will die trockenen Stöcke und die zähen Blätter hier genauer ansehen, ein Stock könnte nützlich sein._ (Ziel: Trockenes Material bei p3 prüfen und sammeln)
+  Plan: take source=t10
+  Tag 1 12:38 take: ok
+**Tag 1 12:38** – _Ich habe gerade einen trockenen Stock genommen, Durst und Hunger sind weg, nur etwas Nässe und leichte Übelkeit bleiben. Ich habe jetzt mehrere Stücke in der Hand und will sehen, was ich damit anfangen kann. Erst mal bleibe ich im Schutz und sammle noch trockenes Material._ (Ziel: Trockenes Material sammeln und prüfen, was sich damit bauen lässt)
+  Plan: rest minutes=10
+**Tag 1 12:48** – _Mir geht es gut, Durst und Hunger sind weg, nur etwas Nässe und leichte Übelkeit bleiben. Ich habe schon mehrere Stücke in der Hand, also will ich die langen zähen Blätter ansehen, die vielleicht als Band taugen. Ein Stock mehr könnte auch nützlich sein, aber meine Hand ist fast voll._ (Ziel: Zähe Blätter prüfen und trockenes Material sammeln, um etwas zu bauen)
+  Plan: drop item=i1 → take source=t9
+  Tag 1 12:49 drop: ok
+  Tag 1 12:53 take: ok
+**Tag 1 12:53** – _Ich habe jetzt einen Speer aus gebundenem Holz, einen kurzen Stock und einen zähen Faserstreifen in der Hand. Mir geht es gut, also will ich schauen, was ich mit Stock und Faser noch bauen kann, und nehme erst einmal nichts Neues._ (Ziel: Mit Stock und Faser etwas Nützliches bauen)
+  Plan: build item=i8
+  Tag 1 13:01 build: ok
+**Tag 1 13:01** – _Ich habe den kurzen Stock zum Gebauten hinzugefügt, es hat funktioniert. Jetzt habe ich noch den Faserstreifen, mit dem ich etwas festbinden könnte. Ich binde das lose Teil hier fest, damit es hält._ (Ziel: Das Gebaute mit der Faser festbinden)
+  Plan: tie binder=i9
+  Tag 1 13:11 tie: ok
+**Tag 1 13:11** – _Das Festbinden hat geklappt, das Gebaute hält jetzt zusammen. Mir geht es gut, nur etwas müde, also schaue ich in Ruhe, was ich da gebaut habe, und ruhe mich kurz aus._ (Ziel: Das Gebaute prüfen und kurz ausruhen)
+  Plan: rest minutes=15
+**Tag 1 13:26** – _Das Gebaute hier bei p3 hält jetzt, und es geht mir gut, nur etwas müde. Ich ruhe noch kurz und überlege dann, ob ich Unterschlupf oder noch mehr Material brauche. Vorher esse ich noch etwas von den gelben Früchten, die haben mir gut getan._ (Ziel: Das Gebaute prüfen, mich stärken und ausruhen)
+  Plan: eat target=t7 → rest minutes=20
+  Tag 1 13:36 eat: ok
+**Tag 1 13:56** – _Mir geht es gut, nur etwas müde. Das Gebaute hier bei p3 hält, und im Schutz kann ich noch etwas ausruhen. Danach sehe ich nach, was ich mit dem Speer bei den Muscheln oder am Wasser anfangen kann._ (Ziel: Ausruhen und das Gebaute weiter ausbauen)
+  Plan: rest minutes=20
+**Tag 1 14:16** – _Mir geht es gut, nur etwas müde. Das Gebaute hier hat noch kein Dach und keine Blätter, also hole ich mir mehr von den zähen Blättern und den trockenen Stöcken, um es weiter auszubauen._ (Ziel: Das Gebaute mit Stöcken und Blättern zu einem Unterschlupf ausbauen)
+  Plan: take source=t10 → build item=i10
+  Tag 1 14:20 take: ok
+  Tag 1 14:28 build: ok
+**Tag 1 14:28** – _Ich habe gerade noch einen Stock zum Gebauten hinzugefügt. Es hält, aber es hat noch kein Dach und keine Blätter. Ich hole mir die zähen Blätter und baue weiter._ (Ziel: Das Gebaute mit Blättern zu einem Unterschlupf ausbauen)
+  Plan: take source=t9
+  Tag 1 14:32 take: ok
+**Tag 1 14:32** – _Ich habe gerade zähe Blätter genommen und halte sie in der Hand. Das Gebaute hier hat noch kein Dach, also füge ich die Blätter hinzu._ (Ziel: Das Gebaute mit Blättern zu einem Unterschlupf ausbauen)
+  Plan: build item=i11
+  Tag 1 14:40 build: ok
+**Tag 1 14:40** – _Das Gebaute hat jetzt Blätter dazubekommen, aber noch kein Dach. Mir geht es gut, nur etwas müde. Ich sehe mir an, wie das Bauwerk jetzt aussieht, und ruhe kurz im Schutz._ (Ziel: Das Gebaute zu einem Unterschlupf ausbauen und ausruhen)
+  Plan: rest minutes=15
+**Tag 1 14:55** – _Mir geht es gut, nur etwas müde. Das Gebaute hat noch kein Dach und keine Aufrechten, also hole ich mehr Stöcke und Blätter und baue weiter._ (Ziel: Das Gebaute mit Stöcken und Blättern zu einem Unterschlupf ausbauen)
+  Plan: take source=t10 → build item=i12 → take source=t9 → build item=i13
+  Tag 1 14:59 take: ok
+  Tag 1 15:07 build: ok
+  Tag 1 15:11 take: ok
+  Tag 1 15:19 build: ok
+**Tag 1 15:19** – _Ich habe wieder ein Stück zum Gebauten hinzugefügt. Es hat noch kein Dach und nur einen Aufrechten, also hole ich mehr Stöcke und Blätter und baue weiter. Dem Körper geht es gut, nur etwas müde._ (Ziel: Das Gebaute mit Stöcken und Blättern zu einem Unterschlupf ausbauen)
+  Plan: take source=t10 → build item=i14 → take source=t9 → build item=i15 → rest minutes=15
+  Tag 1 15:23 take: ok
+  Tag 1 15:31 build: ok
+  Tag 1 15:35 take: ok
+  Tag 1 15:43 build: ok
+**Tag 1 15:58** – _Ich habe viele Stöcke und Blätter verbaut, aber das Gebaute hat immer noch kein Dach und nur einen Aufrechten. Ich bin nur etwas müde und satt. Ich hole noch Stöcke und Blätter und versuche, damit etwas Dachartiges zu bauen._ (Ziel: Das Gebaute mit Stöcken und Blättern zu einem Unterschlupf mit Dach ausbauen)
+  Plan: take source=t10 → build item=i16 → take source=t9 → build item=i17
+  Tag 1 16:02 take: ok
+  Tag 1 16:10 build: ok
+  Tag 1 16:14 take: ok
+  Tag 1 16:22 build: ok
+**Tag 1 16:22** – _Das Gebaute hat jetzt fünf Aufrechte und es hält, aber noch kein Dach und keine Blätter nach der Anzeige. Ich bin etwas müde, also ruhe ich kurz im Schutz und baue dann weiter._ (Ziel: Das Gebaute zu einem Unterschlupf ausbauen und ausruhen)
+  Plan: rest minutes=20 → take source=t9
+  Tag 1 16:46 take: ok
+**Tag 1 16:46** – _Ich halte jetzt zähe Blätter in der Hand. Das Gebaute hat fünf Aufrechte, aber noch kein Dach, also füge ich die Blätter hinzu und binde sie mit dem Faserstreifen fest._ (Ziel: Das Gebaute mit Blättern zu einem Unterschlupf mit Dach ausbauen)
+  Plan: build item=i18
+  Tag 1 16:54 build: ok
+**Tag 1 16:54** – _Ich habe jetzt viele Stöcke und Blätter verbaut, aber das Gebaute zeigt immer noch kein Dach und keine Blätter. Ich halte gerade nichts in der Hand außer meinem Speer. Ich hole noch einmal zähe Blätter und füge sie hinzu, danach binde ich sie fest._ (Ziel: Das Gebaute mit Blättern zu einem Unterschlupf mit Dach ausbauen)
+  Plan: take source=t9 → build item=i19 → rest minutes=15
+  Tag 1 16:58 take: ok
+  Tag 1 17:06 build: ok
+- Tag 2 00:00 weather.day {"weather":"rain","previous":"cloudy"}
+**Tag 2 06:00** – _Ich bin nass und habe gerade geschlafen. Das Gebaute hat neun Aufrechte, aber noch kein Dach und keine Blätter. Ich nehme mir erst Blätter, baue sie ein und binde sie fest._ (Ziel: Dem Gebauten mit Blättern ein Dach geben)
+  Plan: take source=t9 → build item=i20
+  Tag 2 06:04 take: ok
+  Tag 2 06:12 build: ok
+**Tag 2 06:12** – _Ich bin nass, obwohl ich im Gebauten war, denn es hat noch kein Dach. Ich habe schon viele Blätter verbaut, aber es zeigt immer noch keins. Ich nehme noch zähe Blätter, baue sie ein und binde sie fest._ (Ziel: Dem Gebauten mit Blättern ein Dach geben)
+  Plan: take source=t9 → build item=i20 → tie binder=i9
+  Tag 2 06:16 take: ok
+**Tag 2 06:17** – _Ich habe die Blätter schon genommen, aber das Bauen scheitert, weil ich i20 nicht in der Hand halte. Ich halte nur den Speer und einen Faserstreifen. Ich nehme noch einmal Blätter von dem Gewächs hier und baue sie gleich ein._ (Ziel: Dem Gebauten mit Blättern ein Dach geben)
+  Plan: take source=t9 → build item=i21
+  Tag 2 06:21 take: ok
+  Tag 2 06:29 build: ok
+**Tag 2 06:29** – _Ich habe wieder Blätter eingebaut, aber das Gebaute zeigt immer noch kein Dach und keine Blätter. Vielleicht muss ich sie festbinden, damit sie als Dach zählen. Ich nehme noch Blätter, baue sie ein und binde sie mit dem Faserstreifen fest._ (Ziel: Dem Gebauten mit Blättern ein Dach geben)
+  Plan: tie binder=i22
+  Tag 2 06:39 tie: ok
+**Tag 2 06:39** – _Ich habe wieder Blätter verbaut und festgebunden, aber die Anzeige zeigt noch kein Dach. Vielleicht fehlt ein Dach-Teil, das quer über den Aufrechten liegt, und Blätter allein reichen nicht. Ich hole Stöcke und lege sie quer darüber, dann Blätter darauf._ (Ziel: Dem Gebauten ein Dach geben, mit Stöcken quer und Blättern darauf)
+  Plan: take source=t10 → build item=i23
+  Tag 2 06:43 take: fehlgeschlagen (none_left)
+**Tag 2 06:43** – _Die Stöcke hier sind aufgebraucht, aber am Strand bei p7 liegt viel angespültes Holz. Ich gehe dorthin, hole Stücke und bringe sie zum Gebauten, um sie quer über die Aufrechten zu legen._ (Ziel: Dem Gebauten ein Dach geben, mit Stöcken quer und Blättern darauf)
+  Plan: move to=p7 → take source=t14 → take source=t14 → move to=p3
+  Tag 2 06:50 move: ok
+  Tag 2 06:55 move: ok
+  Tag 2 06:59 take: ok
+  Tag 2 07:03 take: ok
+  Tag 2 07:08 move: ok
+  Tag 2 07:15 move: ok
+**Tag 2 07:16** – _Ich bin wieder beim Gebauten und halte jetzt zwei schwere Holzstücke. Die lege ich quer über die Aufrechten, damit ein Dach entsteht, und binde sie danach fest._ (Ziel: Dem Gebauten ein Dach geben, mit Stöcken quer und Blättern darauf)
+  Plan: build item=i23 → build item=i24 → take source=t9 → tie binder=i22
+  Tag 2 07:24 build: ok
+  Tag 2 07:32 build: ok
+  Tag 2 07:36 take: ok
+**Tag 2 07:37** – _Ich habe wieder Blätter genommen, halte aber den Faserstreifen i22 nicht, deshalb ging das Festbinden nicht. Ich halte nur Speer und einen Faserstreifen i25. Ich baue die Blätter ein und binde dann mit dem Streifen fest, den ich habe._ (Ziel: Dem Gebauten ein Dach geben, mit Stöcken quer und Blättern darauf)
+  Plan: take source=t9 → build item=i26 → tie binder=i25
+  Tag 2 07:41 take: ok
+  Tag 2 07:49 build: ok
+  Tag 2 07:59 tie: ok
+**Tag 2 07:59** – _Ich habe wieder Holz und Blätter eingebaut und festgebunden, aber das Gebaute zeigt immer noch kein Dach. Ich sehe erst einmal nach, was ich in der Hand halte, und prüfe dann, ob noch etwas fehlt._ (Ziel: Dem Gebauten ein Dach geben, mit Stöcken quer und Blättern darauf)
+  Plan: take source=t9 → build item=i27 → tie binder=i25
+  Tag 2 08:03 take: ok
+  Tag 2 08:11 build: ok
+**Tag 2 08:12** – _Ich halte nur den Speer, das Festbinden ging nicht, weil mir der Faserstreifen fehlt. Das Gebaute zeigt immer noch kein Dach, obwohl ich so viel verbaut habe. Ich hole noch zähe Blätter und neue Streifen und sehe dann nach, was fehlt._ (Ziel: Dem Gebauten ein Dach geben)
+  Plan: take source=t9 → take source=t9
+  Tag 2 08:16 take: ok
+  Tag 2 08:20 take: ok
+**Tag 2 08:20** – _Das Gebaute zeigt immer noch kein Dach, obwohl ich viel verbaut habe. Ich halte nur den Speer und zwei Streifen, also probiere ich etwas anderes: erst trinken, weil der Durst da ist, dann prüfe ich die Blätter noch einmal._ (Ziel: Dem Gebauten ein Dach geben)
+  Plan: move to=p4 → drink target=t4 → move to=p3
+  ⟳ Komme nicht weiter mit „Blätter und Holz einbauen und festbinden, damit ein Dach entsteht“, ändere: pause
+  Tag 2 08:28 move: ok
+  Tag 2 08:33 drink: ok
+  Tag 2 08:41 move: ok
+**Tag 2 08:42** – _Der Durst ist gestillt, und das Gebaute zeigt immer noch kein Dach. Ich habe schon viel verbaut, vielleicht fehlt etwas anderes als Blätter. Ich lasse das Problem erst einmal ruhen und esse etwas von den gelben Früchten, damit ich bei Kräften bleibe._ (Ziel: Das Dach-Problem ruhen lassen und bei Kräften bleiben)
+  Plan: eat target=t7
+  ⟳ Komme nicht weiter mit „Blätter und Holz einbauen und festbinden, damit ein Dach entsteht“, ändere: pause
+  Tag 2 08:52 eat: ok
+**Tag 2 08:52** – _Ich bin satt und habe keinen Durst mehr. Das Gebaute hat zwölf Aufrechte und noch kein Dach, vielleicht fehlt etwas, das dichter ist. Ich ruhe kurz und überlege, dann sehe ich weiter._ (Ziel: Das Dach-Problem ruhen lassen und bei Kräften bleiben)
+  Plan: rest minutes=15
+**Tag 2 09:07** – _Es regnet und ich werde nass, das Gebaute hat noch kein Dach. Vielleicht fehlen die Blätter obendrauf, ich habe bisher nur Holz und Blätter an den Seiten eingebaut. Ich nehme wieder Blätter und lege sie oben auf._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: take source=t9 → take source=t9
+  Tag 2 09:11 take: ok
+  Tag 2 09:15 take: fehlgeschlagen (hands_full)
+**Tag 2 09:15** – _Meine Hände sind voll, ich halte den Speer und drei Faserstreifen, deshalb ging das Nehmen nicht. Die Blätter von t9 sind vielleicht gar nicht das, was dem Gebauten fehlt. Ich baue erst die Streifen ein, schaue dann, was sich verändert, und lege die Blätter obendrauf._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: put item=i6 onto=s1 → take source=t9 → build item=i28
+  Tag 2 09:17 put: ok
+**Tag 2 09:17** – _Ich habe den Speer auf das Gebaute gelegt, jetzt sind meine Hände frei für drei Faserstreifen. Die Blätter von t9 sind wohl nicht genug, aber ich versuche sie jetzt noch obendrauf zu legen._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: build item=i28 → take source=t9 → build item=i29
+  Tag 2 09:25 build: ok
+  Tag 2 09:29 take: ok
+  Tag 2 09:37 build: ok
+**Tag 2 09:37** – _Ich habe wieder Faserstreifen eingebaut, aber das Gebaute hat noch kein Dach, obwohl es regnet. Ich halte noch zwei Streifen und prüfe erst, ob etwas lose ist, dann lege ich die Blätter obendrauf._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: tie binder=i30 → take source=t9
+  Tag 2 09:47 tie: ok
+  Tag 2 09:51 take: ok
+**Tag 2 09:51** – _Ich habe zwölf Aufrechte und viel eingebaut, aber es zeigt noch kein Dach. Ich halte zwei Faserstreifen und habe gerade wieder Blätter genommen. Vielleicht muss ich die Blätter nicht an die Seiten, sondern obendrauf legen. Ich probiere es mit put auf das Gebaute._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: put item=t9 onto=s1
+**Tag 2 09:52** – _Ich halte nur zwei Faserstreifen, die Blätter von t9 habe ich gar nicht in der Hand, deshalb ging das Legen nicht. Ich nehme noch einmal Blätter, aber erst lasse ich einen Streifen los, damit ich sie wirklich tragen kann, und baue sie dann ein._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: take source=t9 → build item=t9
+  Tag 2 09:56 take: ok
+**Tag 2 09:57** – _Ich halte nur Faserstreifen, die Blätter von t9 sind gar nicht in meiner Hand, deshalb ging das Bauen nicht. Ich lasse zuerst einen Streifen los und nehme dann Blätter, die lege ich oben auf das Gebaute._ (Ziel: Dem Gebauten ein Dach geben, mit Blättern obendrauf)
+  Plan: put item=i31 onto=s1 → take source=t9
+  Tag 2 09:59 put: ok
+  Tag 2 10:03 take: ok
+**Tag 2 10:03** – _Ich bin klatschnass, und das Gebaute hat noch kein Dach. Ich halte jetzt wohl Blätter von t9 in der Hand und baue sie obendrauf ein, dann sehe ich, ob sich etwas ändert._ (Ziel: Dem Gebauten ein Dach aus Blättern geben)
+  Plan: take source=t9 → build item=i32 → tie binder=i33
+  Tag 2 10:07 take: fehlgeschlagen (none_left)
+**Tag 2 10:07** – _Die langen Blätter von t9 sind aufgebraucht, und ich bin immer noch klatschnass. Ich halte jetzt wohl Blätter in der Hand und baue sie ein, dann sehe ich, ob das Dach entsteht._ (Ziel: Dem Gebauten ein Dach aus Blättern geben)
+  Plan: build item=i32
+  Tag 2 10:15 build: ok
+**Tag 2 10:15** – _Die langen Blättern von t9 sind aufgebraucht, und ich halte nur noch Faserstreifen. Das Gebaute hat immer noch kein Dach, obwohl ich viel eingebaut habe. Am Strand bei p7 liegt viel angespültes Holz, vielleicht eignet es sich besser für ein Dach._ (Ziel: Dem Gebauten ein Dach geben, mit Material von p7)
+  Plan: move to=p7 → take source=t14 → take source=t14 → move to=p3
+  ⟳ Komme nicht weiter mit „Mit den langen Blättern von t9 ein Dach bauen“, ändere: material
+  Tag 2 10:22 move: ok
+  Tag 2 10:27 move: ok
+  Tag 2 10:31 take: ok
+  Tag 2 10:35 take: ok
+  Tag 2 10:40 move: ok
+  Tag 2 10:47 move: ok
+**Tag 2 10:48** – _Ich bin zurück bei dem Gebauten und halte zwei Faserstreifen und zwei Holzstücke. Das Holz vom Strand baue ich jetzt oben auf ein und schaue, ob ein Dach entsteht._ (Ziel: Dem Gebauten mit Holz von p7 ein Dach geben)
+  Plan: build item=i35 → build item=i36 → tie binder=i33
+  Tag 2 10:56 build: ok
+  Tag 2 11:04 build: ok
+  Tag 2 11:14 tie: ok
+**Tag 2 11:14** – _Ich habe das Holz vom Strand eingebaut und festgebunden. Das Gebaute zeigt noch 16 Aufrechte und keine Blätter, also immer noch kein Dach. Ich bin nass, aber nicht durstig oder hungrig. Ich hole mehr Holz von p7 und lege es obendrauf, vielleicht reicht das._ (Ziel: Dem Gebauten mit Holz von p7 ein Dach geben)
+  Plan: move to=p5 → move to=p7 → take source=t14 → take source=t14 → move to=p5 → move to=p3
+  Tag 2 11:21 move: ok
+  Tag 2 11:26 move: ok
+  Tag 2 11:30 take: ok
+  Tag 2 11:34 take: ok
+  Tag 2 11:39 move: ok
+  Tag 2 11:46 move: ok
+**Tag 2 11:47** – _Ich halte Holzstücke und einen Faserstreifen, und das Gebaute hat immer noch kein Dach. Vielleicht fehlt eher etwas Flaches, das die Lücken oben schließt, und Holz allein reicht nicht. Ich baue die Holzstücke ein und binde sie fest, dann schaue ich, was sich ändert._ (Ziel: Dem Gebauten ein Dach geben)
+  Plan: build item=i38 → build item=i37 → tie binder=i34
+  ◇ Es fehlt (g1): Ich bekomme kein Dach auf das Gebaute, das gegen Nässe schützt; bräuchte: flach und breit, deckt Lücken oben ab, bleibt oben liegen
+  Tag 2 11:55 build: ok
+  Tag 2 12:03 build: ok
+  Tag 2 12:13 tie: ok
+**Tag 2 12:13** – _Ich bin klatschnass und das Gebaute hat immer noch kein Dach, obwohl ich viel Holz verbaut habe. Die trockenen gefallenen Wedel bei t6 in p2 sind flach und breit, die probiere ich als Dach. Ich hole welche und baue sie oben ein._ (Ziel: Dem Gebauten mit den trockenen Wedeln von t6 ein Dach geben)
+  Plan: move to=p2 → take source=t6 → take source=t6 → move to=p3
+  Tag 2 12:18 move: ok
+  Tag 2 12:22 take: ok
+  Tag 2 12:26 take: ok
+  Tag 2 12:31 move: ok
+**Tag 2 12:32** – _Ich halte zwei große nasse Blätter von den Wedeln und stehe beim Gebauten. Die sind flach und breit, die baue ich oben ein und binde sie fest, dann sehe ich, ob ein Dach entsteht._ (Ziel: Dem Gebauten mit den großen Wedeln ein Dach geben)
+  Plan: build item=i40 → build item=i39
+  Tag 2 12:40 build: ok
+  Tag 2 12:48 build: ok
+**Tag 2 12:48** – _Ich habe die großen Wedel eingebaut, aber das Gebaute zeigt wohl noch kein Dach. Ich bin klatschnass und es regnet weiter. Ich schaue erst, ob es überhaupt etwas ändert, wenn ich mich hineinsetze und kurz abwarte._ (Ziel: Prüfen, ob das Gebaute schon etwas gegen den Regen hilft)
+  Plan: rest minutes=10
+**Tag 2 12:58** – _Ich habe die Wedel eingebaut, aber das Gebaute hat immer noch kein Dach und ich bin klatschnass. Ich gehe hinein, ruhe kurz und merke, ob es etwas gegen den Regen ändert._ (Ziel: Prüfen, ob das Gebaute schon gegen den Regen hilft)
+  Plan: rest minutes=15
+**Tag 2 13:13** – _Das Gebaute zeigt jetzt ein dickes Dach, 18 Aufrechte und 2 Blätter, also hat es endlich geklappt. Ich bin trotzdem noch klatschnass, also gehe ich hinein und ruhe mich aus, um zu merken, ob es gegen den Regen hilft._ (Ziel: Prüfen, ob das Dach des Gebauten gegen Regen und Nässe hilft)
+  Plan: rest minutes=20
+  ◆ Gelöst (g1): Ich bekomme kein Dach auf das Gebaute, das gegen Nässe schützt
+**Tag 2 13:33** – _Das Gebaute hat jetzt ein dickes Dach, aber ich bin noch klatschnass. Ich war lange drinnen und ruhe weiter. Ich bleibe noch eine Weile und merke, ob die Nässe nachlässt._ (Ziel: Prüfen, ob das Dach gegen Regen und Nässe hilft)
+  Plan: rest minutes=20
+**Tag 2 13:53** – _Das Dach steht, aber ich bin immer noch klatschnass, obwohl ich lange drin geruht habe. Vielleicht trocknet nasse Kleidung nur langsam, solange es regnet. Ich bleibe noch ein Stück ruhig im Gebauten und achte darauf, ob die Nässe nachlässt._ (Ziel: Prüfen, ob die Nässe im Gebauten nachlässt)
+  Plan: rest minutes=20
+**Tag 2 14:13** – _Ich habe lange im Gebauten geruht, aber ich bin immer noch nass, und die Müdigkeit ist nur wenig gestiegen. Vielleicht trocknet es drinnen nur langsam. Ich schlafe jetzt, das tut dem Körper bestimmt gut, und danach schaue ich, ob ich trockener bin._ (Ziel: Im Gebauten schlafen und trocknen)
+  Plan: sleep
+**Tag 2 17:36** – _Ich habe gerade geschlafen, und nichts drückt mehr: kein Durst, kein Hunger, nicht müde, nicht kalt, nicht nass. Das dicke Dach des Gebauten scheint also zu helfen. Jetzt bleibe ich kurz ruhig hier und schaue, wie es weitergeht._ (Ziel: Im trockenen Gebauten bleiben und beobachten, wie es mir geht)
+  Plan: rest minutes=10
+**Tag 2 17:46** – _Das Dach steht und ich fühle mich gut: nicht nass, nicht kalt, nicht müde. Es ist Abend, ich bleibe im Trockenen und schaue, wie sich die Nacht anfühlt._ (Ziel: Im Gebauten bleiben, ausruhen und beobachten)
+  Plan: rest minutes=20
+**Tag 2 18:06** – _Ich bin trocken, warm und satt, und das Dach hält. Es ist Abend, also bleibe ich im Gebauten und ruhe, bis die Nacht kommt._ (Ziel: Im Gebauten bleiben, ausruhen und die Nacht abwarten)
+  Plan: rest minutes=20
+**Tag 2 18:26** – _Ich bin trocken, satt und nicht müde, und das Dach hält den Regen ab. Es ist Abend, also bleibe ich im Gebauten und ruhe noch ein wenig._ (Ziel: Im Gebauten bleiben, ausruhen und die Nacht abwarten)
+  Plan: rest minutes=20
+**Tag 2 18:46** – _Ich bin trocken, satt und ausgeruht, und das Dach hält. Der Abend ist ruhig, also schaue ich, ob es etwas Neues zu entdecken gibt, und gehe als Vorrat zum Süßfrucht-Busch._ (Ziel: Im Gebauten bleiben und die Nacht abwarten)
+  Plan: rest minutes=20
+**Tag 2 19:06** – _Ich bin trocken, satt und ausgeruht, und das Dach hält den Regen ab. Es ist dunkel und regnet, also bleibe ich im Gebauten und schlafe, bis es hell wird._ (Ziel: Im Gebauten die Nacht verbringen und schlafen)
   Plan: sleep
 
 Am Ende lebt die Figur.
-Fingerabdruck: 5b50ab6fd289f65b
+Fingerabdruck: 7190512a9ad5311d

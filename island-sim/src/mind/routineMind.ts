@@ -4,7 +4,7 @@ import { categoryOf } from "./categories";
 import { Inquiry, type InquiryHost } from "./inquiry";
 import { toolClass } from "./intuition";
 import { EpisodicMemory } from "./memory";
-import { describeStep, type MindView, type PlanStep, type ThinkReason, type ThinkRequest, type Thought } from "./thinking";
+import { describeStep, type Change, type MindView, type PlanStep, type ThinkReason, type ThinkRequest, type Thought } from "./thinking";
 import type { Action, Features, Feelings, Mind, MindEvent, Observation, Purpose } from "./types";
 
 /** How the character's free time is spent: built-in rules (stage 4) or an external Thinker (stage 5). */
@@ -15,6 +15,10 @@ const THINK_GAP = 30;
 const THINKS_PER_DAY = 60;
 const RECENT = 24;
 const DISCOVERIES = 40;
+/** How often a planned step must have been done before it shows up in the thinker's tries. */
+const TRIES_SHOWN_FROM = 3;
+const TRIES_SHOWN = 10;
+const SET_ASIDE = 12;
 
 type Use = "drink" | "eat";
 
@@ -77,6 +81,11 @@ export class RoutineMind implements Mind {
   private readonly discoveries: string[] = [];
   private readonly seenResults = new Set<string>();
   private readonly thoughts: { text: string; goal?: string }[] = [];
+  /** Planned steps done so far, by step, with what came of them (strategy history, Handoff §6). */
+  private readonly tries = new Map<string, { times: number; results: Record<string, number>; last: number }>();
+  private readonly setAside: { approach: string; change: Change; day: number }[] = [];
+  private readonly gaps: { id: string; problem: string; wants: string[]; day: number }[] = [];
+  private gapCount = 0;
 
   constructor(
     private readonly rng: Rng,
@@ -258,6 +267,34 @@ export class RoutineMind implements Mind {
     this.thoughts.push({ text: thought.text, goal: thought.goal });
     if (this.thoughts.length > 8) this.thoughts.shift();
     this.emit("thought", { by, text: thought.text, goal: thought.goal ?? null, plan: plan.map(describeStep) });
+    this.takeStock(thought, by);
+  }
+
+  /**
+   * Strategy fatigue and capability gaps (Handoff §5, §7) come from the thinker's
+   * own words, not from rules: the mind only remembers what the thinker said it
+   * is stuck with or lacks, shows it back in later views, and logs it.
+   */
+  private takeStock(thought: Thought, by: string): void {
+    const day = Math.floor(this.now / 1440) + 1;
+    if (thought.stuck?.approach.trim()) {
+      const entry = { approach: thought.stuck.approach.trim(), change: thought.stuck.change, day };
+      this.setAside.push(entry);
+      if (this.setAside.length > SET_ASIDE) this.setAside.shift();
+      this.emit("strategy.fatigue", { by, ...entry });
+    }
+    for (const id of thought.solved ?? []) {
+      const i = this.gaps.findIndex((g) => g.id === id);
+      if (i < 0) continue;
+      const [gap] = this.gaps.splice(i, 1);
+      this.emit("gap.closed", { by, id, problem: gap!.problem, openedDay: gap!.day });
+    }
+    const missing = thought.missing;
+    if (missing?.problem.trim() && missing.wants.length > 0) {
+      const gap = { id: `g${++this.gapCount}`, problem: missing.problem.trim(), wants: missing.wants.map((w) => w.trim()).filter(Boolean), day };
+      this.gaps.push(gap);
+      this.emit("gap.opened", { by, ...gap });
+    }
   }
 
   private decideWithThoughts(): Action {
@@ -383,6 +420,15 @@ export class RoutineMind implements Mind {
     }
     const wasPlanned = this.planStepPending;
     this.planStepPending = false;
+    if (wasPlanned) {
+      const doing = describeStep(o.action as unknown as PlanStep).replace(/ purpose=\S+/, "");
+      const tried = this.tries.get(doing) ?? { times: 0, results: {}, last: 0 };
+      const result = String(o.felt.result ?? (o.success ? "ok" : "failed"));
+      tried.times++;
+      tried.results[result] = (tried.results[result] ?? 0) + 1;
+      tried.last = o.tick;
+      this.tries.set(doing, tried);
+    }
     if (wasPlanned && this.plan) {
       if (!o.success) return this.setback(line);
       this.plan.done++;
@@ -454,6 +500,21 @@ export class RoutineMind implements Mind {
       discoveries: [...this.discoveries],
       thoughts: [...this.thoughts],
       plan: this.plan ? { goal: this.plan.goal, done: this.plan.done, left: this.plan.steps.slice(this.plan.done) } : undefined,
+      ...this.history(),
+    };
+  }
+
+  /** Tries, set-aside approaches and open gaps, each only when there is something to show. */
+  private history(): Pick<MindView, "tries" | "setAside" | "gaps"> {
+    const tries = [...this.tries]
+      .filter(([, t]) => t.times >= TRIES_SHOWN_FROM)
+      .sort((a, b) => b[1].last - a[1].last || (a[0] < b[0] ? -1 : 1))
+      .slice(0, TRIES_SHOWN)
+      .map(([doing, t]) => ({ doing, times: t.times, results: { ...t.results } }));
+    return {
+      ...(tries.length > 0 ? { tries } : {}),
+      ...(this.setAside.length > 0 ? { setAside: this.setAside.map((s) => ({ ...s })) } : {}),
+      ...(this.gaps.length > 0 ? { gaps: this.gaps.map((g) => ({ ...g, wants: [...g.wants] })) } : {}),
     };
   }
 

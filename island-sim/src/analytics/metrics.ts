@@ -1,11 +1,9 @@
 import { TICKS_PER_DAY } from "../core/time";
+import { CHANGES } from "../mind/thinking";
 import type { SimResult } from "../sim";
 import { WEATHER_KINDS, type WeatherKind } from "../world/weather";
 
-/**
- * Per-run metrics (Handoff §30, §36). Metrics that later stages will
- * provide are listed in PENDING_METRICS instead of being faked.
- */
+/** Per-run metrics (Handoff §30, §36). */
 export interface RunMetrics {
   seed: number;
   days: number;
@@ -63,10 +61,21 @@ export interface RunMetrics {
   firesLit: number;
   /** Hours until the first flame; null if never. */
   hoursToFirstFire: number | null;
+  /** Times the thinker said it was stuck with an approach (Handoff §5), and what it changed. */
+  strategyFatigue: number;
+  fatigueChanges: Record<string, number>;
+  /** Capability gaps the thinker named (Handoff §7): opened, later met, still open at the end. */
+  capabilityGapsOpened: number;
+  capabilityGapsClosed: number;
+  capabilityGapsOpen: number;
+  /**
+   * The most times one planned step was done again without bringing any result
+   * it had not brought before. Measured, never shown to the character: it tells whether the
+   * thinker noticed being stuck (strategyFatigue) or kept going regardless.
+   */
+  longestSameTry: number;
   weatherDays: Record<WeatherKind, number>;
 }
-
-export const PENDING_METRICS = ["capabilityGaps", "strategyFatigue"] as const;
 
 const PURPOSES = ["sleep", "drink", "eat", "explore", "shelter", "rest", "idle", "experiment", "work", "plan"] as const;
 
@@ -88,6 +97,9 @@ export function computeMetrics(result: SimResult): RunMetrics {
   let toolMeals = 0;
   let firesLit = 0;
   let hoursToFirstFire: number | null = null;
+  const fatigueChanges = Object.fromEntries(CHANGES.map((c) => [c, 0])) as Record<string, number>;
+  let longestSameTry = 0;
+  const sameTry = new Map<string, { results: Set<string>; sinceNew: number }>();
 
   for (const e of result.log.all()) {
     const d = e.data ?? {};
@@ -102,7 +114,16 @@ export function computeMetrics(result: SimResult): RunMetrics {
       decisionsShapedByLearning++;
       learning.add(`${d.use}|${d.chosen}|${d.instead}`);
     }
+    if (e.type === "strategy.fatigue") fatigueChanges[d.change as string]! += 1;
     if (e.type !== "action.end") continue;
+    if (typeof d.step === "string" && d.kind !== "move" && d.kind !== "idle") {
+      const outcome = String(d.rub ?? d.put ?? d.success);
+      const tried = sameTry.get(d.step) ?? { results: new Set<string>(), sinceNew: 0 };
+      tried.sinceNew = tried.results.has(outcome) ? tried.sinceNew + 1 : 0;
+      tried.results.add(outcome);
+      sameTry.set(d.step, tried);
+      longestSameTry = Math.max(longestSameTry, tried.sinceNew);
+    }
     if (d.put === "flared up") {
       firesLit++;
       if (hoursToFirstFire === null) hoursToFirstFire = round(e.tick / 60, 1);
@@ -163,6 +184,12 @@ export function computeMetrics(result: SimResult): RunMetrics {
     thoughts: count["thought"] ?? 0,
     firesLit,
     hoursToFirstFire,
+    strategyFatigue: count["strategy.fatigue"] ?? 0,
+    fatigueChanges,
+    capabilityGapsOpened: count["gap.opened"] ?? 0,
+    capabilityGapsClosed: count["gap.closed"] ?? 0,
+    capabilityGapsOpen: (count["gap.opened"] ?? 0) - (count["gap.closed"] ?? 0),
+    longestSameTry,
     weatherDays,
   };
 }
