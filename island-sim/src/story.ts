@@ -17,7 +17,7 @@ const HELP = `island-sim story – ein Lauf als Gedankenprotokoll
   --thinker replay   spielt eine Aufzeichnung ab, ohne Claude zu fragen
 
   LLM: Zugangsdaten aus ANTHROPIC_API_KEY (oder ant auth login),
-       Modell ISLAND_SIM_MODEL (Standard claude-opus-5-5), Aufwand ISLAND_SIM_EFFORT (Standard low).
+       Modell ISLAND_SIM_MODEL (Standard claude-sonnet-5-5), Aufwand ISLAND_SIM_EFFORT (Standard low).
 `;
 
 async function main(): Promise<number> {

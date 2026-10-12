@@ -80,7 +80,7 @@ export class LlmThinker implements Thinker {
   readonly usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
   constructor(options: LlmThinkerOptions = {}) {
-    this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-opus-5-5";
+    this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-sonnet-5-5";
     this.effort = options.effort ?? (process.env.ISLAND_SIM_EFFORT as LlmThinkerOptions["effort"]) ?? "low";
     this.client = options.client ?? createClient();
     this.name = `llm:${this.model}`;
