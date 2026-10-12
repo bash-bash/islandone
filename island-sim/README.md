@@ -36,7 +36,7 @@ export ISLAND_SIM_EFFORT=low           # Denktiefe pro Moment: low, medium, high
 npm run story -- --seed 1 --days 3 --thinker llm
 ```
 
-Claude bekommt die Sicht der Figur als JSON und antwortet strukturiert (Gedanke, Ziel, bis zu 6 Schritte). Jede Antwort landet in `recordings/seed-<n>.jsonl`, unter einem Hash der genauen Sicht. `--thinker replay` spielt den Lauf daraus identisch ab, ohne Claude zu fragen (§36: gleicher Seed, gleiches Ergebnis). Die Figur denkt höchstens 60-mal pro Tag und frühestens 30 Minuten nach dem letzten ungefragten Gedanken. Grobe Schätzung, nicht gemessen: mit Opus und Aufwand `low` einige Cent pro Gedanke, also eher Euro pro simuliertem Tag; ein Lauf über 100 Seeds × 30 Tage mit Claude ist deshalb nicht der Normalfall, sondern einzelne Seeds über wenige Tage.
+Claude bekommt die Sicht der Figur als JSON und antwortet strukturiert (Gedanke, Ziel, bis zu 6 Schritte). Jede Antwort landet in `recordings/seed-<n>.jsonl`, unter einem Hash der genauen Sicht. `--thinker replay` spielt den Lauf daraus identisch ab, ohne Claude zu fragen (§36: gleicher Seed, gleiches Ergebnis). Die Figur denkt höchstens 60-mal pro Tag und frühestens 30 Minuten nach dem letzten ungefragten Gedanken. Gemessen am ersten Lauf (Seed 3, 2 Tage, Opus 5.5): 51 Gedanken für rund 1,28 $, also etwa 2,5 Cent pro Gedanke und gut 60 Cent pro simuliertem Tag; die Aufzeichnung liegt in `recordings/seed-3.jsonl`, die Geschichte daraus in `recordings/seed-3-story.md`; ein Lauf über 100 Seeds × 30 Tage mit Claude ist deshalb nicht der Normalfall, sondern einzelne Seeds über wenige Tage.
 
 ## Aufbau
 
