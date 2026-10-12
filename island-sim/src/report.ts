@@ -89,13 +89,14 @@ function label(b: Batch): string {
 }
 
 function overview(batches: Batch[]): string[] {
-  const lines = [`| Lauf | Denker | Seeds | Tage | Gedanken | Kosten (geschätzt) |`, `|---|---|---|---|---|---|`];
+  const lines = [`| Lauf | Denker | Seeds | Tage | Gedanken | Kosten dieses Aufrufs (geschätzt) |`, `|---|---|---|---|---|---|`];
   for (const b of batches) {
     const thoughts = b.runs.reduce((s, r) => s + r.thoughts, 0);
     const dollars = b.runs.reduce((s, r) => s + (r.usage?.dollars ?? 0), 0);
     const seeds = `${b.runs[0]!.seed}–${b.runs[b.runs.length - 1]!.seed}`;
     lines.push(`| \`${b.dir}\` | ${b.thinker} | ${seeds} (${b.runs.length}) | ${b.days} | ${thoughts} | ${dollars > 0 ? `${dollars.toFixed(2)} $` : "–"} |`);
   }
+  lines.push(``, `Abgespielte Gedanken aus einer Aufzeichnung kosten nichts und zählen in der Kostenspalte nicht mit.`);
   return lines;
 }
 
@@ -192,10 +193,12 @@ async function backlog(batches: Batch[], creator: Creator): Promise<string[]> {
     lines.push(`### Gibt es schon (die Figur hat es nur noch nicht gefunden)`, ``);
     const families = new Map<string, typeof present>();
     for (const p of present) families.set(p.verdict.family, [...(families.get(p.verdict.family) ?? []), p]);
-    for (const [family, list] of [...families].sort((a, b) => b[1].length - a[1].length)) {
+    const sorted = [...families].sort((a, b) => b[1].length - a[1].length);
+    for (const [family, list] of sorted.slice(0, 10)) {
       const candidates = [...new Set(list.flatMap((l) => l.verdict.candidates))].join(", ");
       lines.push(`- **${family}** (${list.length}×): ${candidates}${list.some((l) => l.verdict.verdict === "latent") ? " (latent)" : ""}`);
     }
+    if (sorted.length > 10) lines.push(`- … und ${sorted.length - 10} weitere Arten mit ${sorted.slice(10).reduce((s, [, l]) => s + l.length, 0)} Lücken`);
   }
   return lines;
 }

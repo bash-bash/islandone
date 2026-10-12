@@ -105,6 +105,18 @@ export class LlmThinker implements Thinker {
   }
 
   async think(view: MindView): Promise<Thought> {
+    // An answer that does not fit the schema (e.g. an unknown kind of change) is asked once more, then let go.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.ask(view);
+      } catch (error) {
+        if (!(error instanceof Error && error.message.includes("Failed to parse structured output"))) throw error;
+        if (attempt >= 1) return { text: "(Mir fällt gerade nichts ein.)", plan: [] };
+      }
+    }
+  }
+
+  private async ask(view: MindView): Promise<Thought> {
     // Haiku has no server-side fallback for refusals; a refusal is answered below like an empty thought.
     const fallback = this.model.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
     const response = await this.client.beta.messages.parse({
