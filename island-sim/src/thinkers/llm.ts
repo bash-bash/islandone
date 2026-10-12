@@ -13,7 +13,10 @@ import type { MindView, PlanStep, Thinker, Thought } from "../mind/thinking";
  * new taste the way a person would, and the world decides what happens.
  *
  * Model and effort come from ISLAND_SIM_MODEL / ISLAND_SIM_EFFORT; credentials
- * from the environment (ANTHROPIC_API_KEY or an `ant auth login` profile).
+ * from ISLAND_SIM_API_KEY, else the environment (ANTHROPIC_API_KEY or an
+ * `ant auth login` profile). ISLAND_SIM_API_KEY exists because a Claude Code
+ * session keeps ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL for itself; with it the
+ * base URL is the public API (or ISLAND_SIM_BASE_URL), never the inherited one.
  */
 
 const STEP_KINDS = ["move", "drink", "eat", "take", "drop", "bind", "build", "tie", "rub", "put", "rest", "idle", "sleep"] as const;
@@ -73,11 +76,13 @@ export class LlmThinker implements Thinker {
   private readonly client: Anthropic;
   private readonly model: string;
   private readonly effort: NonNullable<LlmThinkerOptions["effort"]>;
+  /** Tokens summed over every call, to see what a run costs. */
+  readonly usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
   constructor(options: LlmThinkerOptions = {}) {
-    this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-opus-5-5";
+    this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-sonnet-5-5";
     this.effort = options.effort ?? (process.env.ISLAND_SIM_EFFORT as LlmThinkerOptions["effort"]) ?? "low";
-    this.client = options.client ?? new Anthropic();
+    this.client = options.client ?? createClient();
     this.name = `llm:${this.model}`;
   }
 
@@ -91,11 +96,22 @@ export class LlmThinker implements Thinker {
       system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: JSON.stringify(view) }],
     });
+    this.usage.calls += 1;
+    this.usage.input += response.usage.input_tokens;
+    this.usage.output += response.usage.output_tokens;
+    this.usage.cacheRead += response.usage.cache_read_input_tokens ?? 0;
+    this.usage.cacheWrite += response.usage.cache_creation_input_tokens ?? 0;
     if (response.stop_reason === "refusal" || !response.parsed_output) {
       return { text: "(Mir fällt gerade nichts ein.)", plan: [] };
     }
     return toThought(response.parsed_output);
   }
+}
+
+function createClient(): Anthropic {
+  const apiKey = process.env.ISLAND_SIM_API_KEY;
+  if (!apiKey) return new Anthropic();
+  return new Anthropic({ apiKey, baseURL: process.env.ISLAND_SIM_BASE_URL ?? "https://api.anthropic.com" });
 }
 
 /** Drops the null fields of the structured answer. */

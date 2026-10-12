@@ -29,12 +29,14 @@ Ausgabe in `out/`: `run-<seed>.json` je Lauf, `summary.json` und `summary.md` ü
 
 ```bash
 export ANTHROPIC_API_KEY=...           # oder ein Profil über `ant auth login`
-export ISLAND_SIM_MODEL=claude-opus-5-5 # Standard; claude-haiku-5-5 ist deutlich günstiger
+# In einer Claude-Code-Cloud-Session stattdessen ISLAND_SIM_API_KEY als Umgebungsvariable
+# der Umgebung setzen: ANTHROPIC_API_KEY und ANTHROPIC_BASE_URL gehören dort Claude Code selbst.
+export ISLAND_SIM_MODEL=claude-sonnet-5-5 # Standard; claude-opus-5-5 kostet doppelt so viel pro Token, claude-haiku-5-5 ist deutlich günstiger
 export ISLAND_SIM_EFFORT=low           # Denktiefe pro Moment: low, medium, high
 npm run story -- --seed 1 --days 3 --thinker llm
 ```
 
-Claude bekommt die Sicht der Figur als JSON und antwortet strukturiert (Gedanke, Ziel, bis zu 6 Schritte). Jede Antwort landet in `recordings/seed-<n>.jsonl`, unter einem Hash der genauen Sicht. `--thinker replay` spielt den Lauf daraus identisch ab, ohne Claude zu fragen (§36: gleicher Seed, gleiches Ergebnis). Die Figur denkt höchstens 60-mal pro Tag und frühestens 30 Minuten nach dem letzten ungefragten Gedanken. Grobe Schätzung, nicht gemessen: mit Opus und Aufwand `low` einige Cent pro Gedanke, also eher Euro pro simuliertem Tag; ein Lauf über 100 Seeds × 30 Tage mit Claude ist deshalb nicht der Normalfall, sondern einzelne Seeds über wenige Tage.
+Claude bekommt die Sicht der Figur als JSON und antwortet strukturiert (Gedanke, Ziel, bis zu 6 Schritte). Jede Antwort landet in `recordings/seed-<n>.jsonl`, unter einem Hash der genauen Sicht. `--thinker replay` spielt den Lauf daraus identisch ab, ohne Claude zu fragen (§36: gleicher Seed, gleiches Ergebnis). Die Figur denkt höchstens 60-mal pro Tag und frühestens 30 Minuten nach dem letzten ungefragten Gedanken. Gemessen an Seed 3 über 2 Tage: Sonnet 5.5 brauchte 77 Gedanken für rund 0,78 $ (etwa 1 Cent pro Gedanke, knapp 40 Cent pro simuliertem Tag) und machte am ersten Tag Feuer; Opus 5.5 brauchte 51 Gedanken für rund 1,28 $ und kam nur bis zum Rauch. Deshalb ist Sonnet der Standard; die Aufzeichnung liegt in `recordings/seed-3.jsonl`, die Geschichte daraus in `recordings/seed-3-story.md`; ein Lauf über 100 Seeds × 30 Tage mit Claude ist deshalb nicht der Normalfall, sondern einzelne Seeds über wenige Tage.
 
 ## Aufbau
 
