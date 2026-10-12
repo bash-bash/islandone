@@ -36,7 +36,24 @@ export interface Thought {
   goal?: string;
   /** Next steps, in order. May be empty (just thinking, or waiting). */
   plan: PlanStep[];
+  /**
+   * Strategy fatigue (Handoff §5), noticed by the thinker itself: an approach it
+   * keeps coming back to without getting anywhere, and what it will change.
+   */
+  stuck?: { approach: string; change: Change };
+  /**
+   * A capability gap (Handoff §7), noticed by the thinker itself: a problem the
+   * things it knows cannot solve well enough, described by the properties of
+   * what is missing, never by the name of a thing.
+   */
+  missing?: { problem: string; wants: string[] };
+  /** Ids of earlier gaps it now considers met. */
+  solved?: string[];
 }
+
+/** What a stuck character can change (Handoff §5, Strategy Fatigue). */
+export const CHANGES = ["material", "shape", "place", "method", "pause"] as const;
+export type Change = (typeof CHANGES)[number];
 
 export interface MindView {
   reason: ThinkReason;
@@ -59,6 +76,16 @@ export interface MindView {
   thoughts: { text: string; goal?: string }[];
   /** The plan it was following, if any, and how far it got. */
   plan?: { goal?: string; done: number; left: PlanStep[] };
+  /**
+   * What it has done again and again of its own accord (3 times or more), with
+   * what came of it: its memory of its own efforts, so it can notice when it is
+   * going round in circles. Nobody says when that is the case.
+   */
+  tries?: { doing: string; times: number; results: Record<string, number> }[];
+  /** Approaches it has itself said it is stuck with, oldest first. */
+  setAside?: { approach: string; change: Change; day: number }[];
+  /** Capabilities it has itself said it lacks and has not yet found. */
+  gaps?: { id: string; problem: string; wants: string[]; day: number }[];
 }
 
 export interface Thinker {

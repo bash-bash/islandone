@@ -2,7 +2,7 @@ import { EventLog } from "./core/eventLog";
 import { RngStreams, type Rng } from "./core/rng";
 import { TICKS_PER_DAY, timeOf } from "./core/time";
 import { RoutineMind } from "./mind/routineMind";
-import type { Thinker, ThinkRequest, Thought } from "./mind/thinking";
+import { describeStep, type PlanStep, type Thinker, type ThinkRequest, type Thought } from "./mind/thinking";
 import type { Action, Mind, Purpose } from "./mind/types";
 import { Perception } from "./perception/perceive";
 import { actionDuration, completeAction } from "./world/actions";
@@ -118,6 +118,7 @@ export function* simulate(options: SimOptions): Generator<ThinkRequest, SimResul
           kind: current.action.kind,
           purpose: current.action.purpose,
           ...("tool" in current.action && current.action.tool ? { tool: current.action.tool } : {}),
+          ...(current.action.purpose === "plan" ? { step: describeStep(current.action as unknown as PlanStep).replace(/ purpose=\S+/, "") } : {}),
           ...result,
           place: world.character.place,
         },
