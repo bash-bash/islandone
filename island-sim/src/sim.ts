@@ -1,7 +1,7 @@
 import { EventLog } from "./core/eventLog";
 import { RngStreams, type Rng } from "./core/rng";
 import { TICKS_PER_DAY, timeOf } from "./core/time";
-import { RoutineMind } from "./mind/routineMind";
+import { RoutineMind, type ThinkingPace } from "./mind/routineMind";
 import { describeStep, type PlanStep, type Thinker, type ThinkRequest, type Thought } from "./mind/thinking";
 import type { Action, Mind, Purpose } from "./mind/types";
 import { Perception } from "./perception/perceive";
@@ -22,6 +22,8 @@ export interface SimOptions {
    * worth thinking about and follows the plans it comes up with.
    */
   thinker?: Thinker;
+  /** How often the character stops to think with a thinker (default: EAGER_PACE). */
+  pace?: ThinkingPace;
 }
 
 export interface TickContext {
@@ -85,7 +87,7 @@ export function* simulate(options: SimOptions): Generator<ThinkRequest, SimResul
   const log = new EventLog(options.keepEvents ?? false);
   const world = createWorld(rng.get("world-setup"));
   const thinker = options.thinker;
-  const mind: Mind = (options.createMind ?? ((r) => new RoutineMind(r, thinker ? "external" : "rules")))(rng.get("mind"));
+  const mind: Mind = (options.createMind ?? ((r) => new RoutineMind(r, thinker ? "external" : "rules", options.pace)))(rng.get("mind"));
   const perception = new Perception();
   const purposeTicks: Record<string, number> = {};
   const total = days * TICKS_PER_DAY;

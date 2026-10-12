@@ -10,9 +10,24 @@ import type { Action, Features, Feelings, Mind, MindEvent, Observation, Purpose 
 /** How the character's free time is spent: built-in rules (stage 4) or an external Thinker (stage 5). */
 export type ThinkingMode = "rules" | "external";
 
-/** Minimum minutes between unprompted thoughts, and a daily cap (keeps an LLM affordable). */
-const THINK_GAP = 30;
-const THINKS_PER_DAY = 60;
+/**
+ * How often the character stops to think (keeps an LLM affordable).
+ * gap: minimum minutes between unprompted thoughts; perDay: daily cap;
+ * planSteps: longest plan followed; calmGap: minutes a finished plan waits
+ * before the next thought (0: think right away). Surprises, setbacks and
+ * waking up are always thought about, within the daily cap.
+ */
+export interface ThinkingPace {
+  gap: number;
+  perDay: number;
+  planSteps: number;
+  calmGap: number;
+}
+
+/** Stage 5: think whenever a plan is done. */
+export const EAGER_PACE: ThinkingPace = { gap: 30, perDay: 60, planSteps: 8, calmGap: 0 };
+/** Stage 6, for cost: longer plans, and a finished plan waits an hour since the last thought. */
+export const FRUGAL_PACE: ThinkingPace = { gap: 60, perDay: 24, planSteps: 12, calmGap: 60 };
 const RECENT = 24;
 const DISCOVERIES = 40;
 /** How often a planned step must have been done before it shows up in the thinker's tries. */
@@ -97,6 +112,7 @@ export class RoutineMind implements Mind {
   constructor(
     private readonly rng: Rng,
     private readonly thinking: ThinkingMode = "rules",
+    private readonly pace: ThinkingPace = EAGER_PACE,
   ) {
     const self = this;
     const host: InquiryHost = {
@@ -255,9 +271,11 @@ export class RoutineMind implements Mind {
     if (this.thinking !== "external") return null;
     const day = Math.floor(this.now / 1440);
     if (this.thinksToday.day !== day) this.thinksToday = { day, count: 0 };
-    if (this.thinksToday.count >= THINKS_PER_DAY) return null;
+    if (this.thinksToday.count >= this.pace.perDay) return null;
     let reason = this.thinkReason;
-    if (!reason && !this.plan && this.now - this.lastThink >= THINK_GAP && Math.max(this.feelings.thirst, this.feelings.hunger) < 3) {
+    // A finished plan can wait a while; the body looks after itself meanwhile.
+    if ((reason === "plan done" || reason === "free") && this.now - this.lastThink < this.pace.calmGap) return null;
+    if (!reason && !this.plan && this.now - this.lastThink >= this.pace.gap && Math.max(this.feelings.thirst, this.feelings.hunger) < 3) {
       reason = this.wasAsleep ? "woke" : "free";
     }
     if (!reason) return null;
@@ -269,7 +287,7 @@ export class RoutineMind implements Mind {
     this.lastThink = this.now;
     this.thinkReason = null;
     this.thinkTrigger = undefined;
-    const plan = thought.plan.slice(0, 8);
+    const plan = thought.plan.slice(0, this.pace.planSteps);
     this.plan = plan.length > 0 ? { goal: thought.goal, steps: plan, done: 0 } : null;
     this.thoughts.push({ text: thought.text, goal: thought.goal });
     if (this.thoughts.length > 8) this.thoughts.shift();
@@ -337,7 +355,7 @@ export class RoutineMind implements Mind {
     }
     const expect = thought.guess?.trim();
     if (expect) {
-      const guess = { id: `h${++this.guessCount}`, expect, plan: thought.plan.slice(0, 8).map(describeStep), day };
+      const guess = { id: `h${++this.guessCount}`, expect, plan: thought.plan.slice(0, this.pace.planSteps).map(describeStep), day };
       this.guesses.push(guess);
       this.emit("hypothesis.proposed", { by, hypothesis: guess.id, expect, plan: guess.plan });
       if (this.guesses.length > GUESSES_OPEN) {
@@ -363,7 +381,7 @@ export class RoutineMind implements Mind {
       if (action) return action;
     }
     if (dark && f.tired >= 1) return { kind: "sleep", purpose: "sleep" };
-    return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: THINK_GAP, purpose: "idle" };
+    return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: this.pace.gap, purpose: "idle" };
   }
 
   private mostUrgent(dark: boolean): { goal: Purpose; level: number } {

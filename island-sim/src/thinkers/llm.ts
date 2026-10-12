@@ -51,7 +51,7 @@ const Answer = z.object({
 
 export const SYSTEM_PROMPT = `Du bist das Denken einer Figur, die allein auf einer Insel gestrandet ist.
 
-Du weißt nur, was die Figur selbst gesehen, gefühlt und erlebt hat. Das bekommst du als JSON:
+Du weißt nur, was die Figur selbst gesehen, gefühlt und erlebt hat. Das bekommst du als JSON. Folgt eine Nachricht auf deine letzte Antwort, enthält sie nur, was sich seitdem geändert hat; die in unchanged genannten Teile sind wie zuletzt:
 - Orte und Dinge haben neutrale Kennungen (p3, t7, i12, s1, f1). Was ein Ding ist, weißt du nicht; du siehst nur sein Aussehen ("looks" und weitere Merkmale).
 - feelings: Durst, Hunger, Müdigkeit, Kälte, Nässe, Übelkeit, Schmerz, jeweils 0 (nichts) bis 4 (sehr stark).
 - beliefs: was die Figur aus Erfahrung glaubt, mit Konfidenz.
@@ -61,7 +61,7 @@ Du weißt nur, was die Figur selbst gesehen, gefühlt und erlebt hat. Das bekomm
 - setAside und gaps (wenn vorhanden): Ansätze, bei denen du selbst gesagt hast, dass du feststeckst, und was dir nach deinen eigenen Worten noch fehlt.
 - guesses und lessons (wenn vorhanden): deine eigenen Vermutungen, über die du noch nicht geurteilt hast (mit dem Plan, mit dem du sie prüfen wolltest), und was du nach deinen eigenen Worten aus früheren Vermutungen gelernt hast.
 
-Deine Antwort: ein kurzer Gedanke in der Ich-Form auf Deutsch (text, 1 bis 3 Sätze, so wie man vor sich hin denkt), ein Ziel in eigenen Worten (goal) und die nächsten Schritte (plan, höchstens 6). Du darfst auch nur nachdenken und einen leeren Plan geben.
+Deine Antwort: ein kurzer Gedanke in der Ich-Form auf Deutsch (text, 1 bis 3 Sätze, so wie man vor sich hin denkt), ein Ziel in eigenen Worten (goal) und die nächsten Schritte (plan, höchstens 12; plane ruhig etwas weiter voraus). Du darfst auch nur nachdenken und einen leeren Plan geben.
 
 Schritte (alle nicht genannten Felder sind null):
 - move {to}: zu einem bekannten Ort gehen (der Weg wird selbst gefunden).
@@ -97,6 +97,14 @@ export class BudgetExceeded extends Error {
 
 export interface LlmThinkerOptions {
   budget?: Budget;
+  /**
+   * Keep talking in one conversation instead of sending the whole view every
+   * time: after a full view, only what changed is sent, and the rest is read
+   * from the prompt cache at a tenth of the price. The conversation starts
+   * afresh with a full view after `resetAfter` thoughts, so it does not grow
+   * without end.
+   */
+  conversation?: { resetAfter: number };
   model?: string;
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
   client?: Anthropic;
@@ -108,6 +116,8 @@ export class LlmThinker implements Thinker {
   readonly model: string;
   private readonly effort: NonNullable<LlmThinkerOptions["effort"]>;
   private readonly budget?: Budget;
+  private readonly conversation?: { resetAfter: number };
+  private talk: { messages: Anthropic.Beta.BetaMessageParam[]; last: MindView; turns: number } | null = null;
   /** Tokens summed over every call, to see what a run costs. */
   readonly usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -116,6 +126,7 @@ export class LlmThinker implements Thinker {
     this.effort = options.effort ?? (process.env.ISLAND_SIM_EFFORT as LlmThinkerOptions["effort"]) ?? "low";
     this.client = options.client ?? createClient();
     this.budget = options.budget;
+    this.conversation = options.conversation;
     this.name = `llm:${this.model}`;
   }
 
@@ -135,14 +146,29 @@ export class LlmThinker implements Thinker {
     if (this.budget && this.budget.spent >= this.budget.limit) throw new BudgetExceeded(this.budget);
     // Haiku has no server-side fallback for refusals; a refusal is answered below like an empty thought.
     const fallback = this.model.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
+    const fresh = !this.conversation || !this.talk || this.talk.turns >= this.conversation.resetAfter;
+    const history = fresh ? [] : this.talk!.messages;
+    const text = JSON.stringify(fresh ? view : changes(this.talk!.last, view));
+    const question: Anthropic.Beta.BetaMessageParam = { role: "user", content: [{ type: "text", text, cache_control: { type: "ephemeral" } }] };
     const response = await this.client.beta.messages.parse({
       model: this.model,
       max_tokens: 8000,
       ...fallback,
       output_config: { effort: this.effort, format: betaZodOutputFormat(Answer) },
       system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: JSON.stringify(view) }],
+      messages: [...history, question],
     });
+    if (this.conversation) {
+      // Earlier questions lose their cache mark: at most four marks are allowed, and only the newest matters.
+      const plain: Anthropic.Beta.BetaMessageParam = { role: "user", content: [{ type: "text", text }] };
+      const answer = response.content.flatMap((b): Anthropic.Beta.BetaContentBlockParam[] => {
+        if (b.type === "text") return [{ type: "text", text: b.text }];
+        if (b.type === "thinking") return [{ type: "thinking", thinking: b.thinking, signature: b.signature }];
+        if (b.type === "redacted_thinking") return [{ type: "redacted_thinking", data: b.data }];
+        return [];
+      });
+      this.talk = answer.length > 0 ? { messages: [...history, plain, { role: "assistant", content: answer }], last: view, turns: (fresh ? 0 : this.talk!.turns) + 1 } : null;
+    }
     this.usage.calls += 1;
     this.usage.input += response.usage.input_tokens;
     this.usage.output += response.usage.output_tokens;
@@ -158,6 +184,25 @@ export class LlmThinker implements Thinker {
     }
     return toThought(response.parsed_output);
   }
+}
+
+/**
+ * What changed since the last view: reason, trigger and time always, every
+ * other part only when it differs. `unchanged` names the parts left out.
+ */
+export function changes(before: MindView, now: MindView): Record<string, unknown> {
+  const out: Record<string, unknown> = { reason: now.reason, trigger: now.trigger, time: now.time };
+  const unchanged: string[] = [];
+  const keys = new Set([...Object.keys(before), ...Object.keys(now)]);
+  for (const key of [...keys].sort()) {
+    if (key === "reason" || key === "trigger" || key === "time") continue;
+    const a = (before as unknown as Record<string, unknown>)[key];
+    const b = (now as unknown as Record<string, unknown>)[key];
+    if (JSON.stringify(a) === JSON.stringify(b)) unchanged.push(key);
+    else out[key] = b ?? null;
+  }
+  out.unchanged = unchanged;
+  return out;
 }
 
 /** Dollars per million tokens (input, output, cache read, cache write), from the published price list. */

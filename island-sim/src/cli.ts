@@ -8,12 +8,13 @@ import type { Thinker } from "./mind/thinking";
 import { CuriousThinker } from "./thinkers/curious";
 import { Budget, costOf, LlmThinker } from "./thinkers/llm";
 import { MixedThinker } from "./thinkers/mixed";
+import { FRUGAL_PACE } from "./mind/routineMind";
 import { RecordedThinker } from "./thinkers/recorded";
 
 const HELP = `island-sim – Simulation ohne Grafik
 
   npm run sim -- [--seeds 100] [--days 30] [--first-seed 1] [--out out] [--check]
-                 [--thinker rules|curious|llm|mixed|replay] [--model claude-sonnet-5-5] [--concurrency 5] [--budget 4]
+                 [--thinker rules|curious|llm|mixed|replay] [--model claude-sonnet-5-5] [--concurrency 5] [--budget 4] [--frugal]
 
   --seeds        Anzahl der Läufe (Seeds first-seed … first-seed+seeds-1)
   --days         virtuelle Tage pro Lauf
@@ -29,6 +30,9 @@ const HELP = `island-sim – Simulation ohne Grafik
                    replay   spielt die Aufzeichnungen ab, ohne Claude zu fragen
   --model        Modell für llm und Ordner der Aufzeichnungen (recordings/<model>/seed-<n>.jsonl)
   --concurrency  wie viele Seeds mit llm/replay gleichzeitig laufen
+  --frugal       sparsam denken: längere Pläne, nach einem fertigen Plan eine Stunde Pause, höchstens 24
+                 Gedanken am Tag, und Claude bekommt im Gespräch nur, was sich geändert hat
+                 (Aufzeichnungen unter recordings/<model>-frugal/)
   --budget       höchstens so viele Dollar für Claude ausgeben, danach wird abgebrochen
 `;
 
@@ -44,6 +48,7 @@ async function main(): Promise<number> {
       model: { type: "string", default: process.env.ISLAND_SIM_MODEL ?? "claude-sonnet-5-5" },
       concurrency: { type: "string", default: "5" },
       budget: { type: "string" },
+      frugal: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
   });
@@ -58,7 +63,10 @@ async function main(): Promise<number> {
   const budget = values.budget === undefined ? undefined : new Budget(Number(values.budget));
   if (budget && !(budget.limit > 0)) throw new Error(`--budget braucht einen Betrag in Dollar, bekam "${values.budget}"`);
   const model = values.thinker === "mixed" ? "mixed-haiku-sonnet" : values.model;
-  const recording = (seed: number) => join("recordings", model, `seed-${seed}.jsonl`);
+  const frugal = values.frugal;
+  const pace = frugal ? FRUGAL_PACE : undefined;
+  const conversation = frugal ? { resetAfter: 8 } : undefined;
+  const recording = (seed: number) => join("recordings", frugal ? `${model}-frugal` : model, `seed-${seed}.jsonl`);
 
   let thinker: ((seed: number) => Thinker) | undefined;
   let asynchronous = false;
@@ -69,14 +77,14 @@ async function main(): Promise<number> {
       thinker = () => new CuriousThinker();
       break;
     case "llm":
-      thinker = (seed) => new RecordedThinker(recording(seed), new LlmThinker({ model, budget }));
+      thinker = (seed) => new RecordedThinker(recording(seed), new LlmThinker({ model, budget, conversation }));
       asynchronous = true;
       break;
     case "mixed":
       thinker = (seed) =>
         new RecordedThinker(
           recording(seed),
-          new MixedThinker(new LlmThinker({ model: "claude-haiku-5-5", budget }), new LlmThinker({ model: "claude-sonnet-5-5", budget })),
+          new MixedThinker(new LlmThinker({ model: "claude-haiku-5-5", budget, conversation }), new LlmThinker({ model: "claude-sonnet-5-5", budget, conversation })),
         );
       asynchronous = true;
       break;
@@ -98,7 +106,7 @@ async function main(): Promise<number> {
     if (asynchronous) process.stderr.write(`Seed ${run.seed}: ${run.thoughts} Gedanken${usage ? `, ${usage.dollars?.toFixed(2) ?? "?"} $` : ""}\n`);
   };
   const run = (): Promise<BatchResult> | BatchResult =>
-    asynchronous ? runBatchAsync({ firstSeed, count, days, thinker, onRun, concurrency }) : runBatch({ firstSeed, count, days, thinker, onRun });
+    asynchronous ? runBatchAsync({ firstSeed, count, days, thinker, pace, onRun, concurrency }) : runBatch({ firstSeed, count, days, thinker, pace, onRun });
 
   const started = performance.now();
   const { summary } = await run();

@@ -1,6 +1,7 @@
 import { StreamHash } from "./core/hash";
 import { computeMetrics, runWords, type RunMetrics, type RunWords } from "./analytics/metrics";
 import { summarize, type BatchSummary } from "./analytics/summary";
+import type { ThinkingPace } from "./mind/routineMind";
 import type { Thinker } from "./mind/thinking";
 import { runSimulation, runSimulationAsync } from "./sim";
 
@@ -10,6 +11,7 @@ export interface BatchOptions {
   days: number;
   /** A fresh thinker per run (stage 5); without it the built-in rules think. */
   thinker?: (seed: number) => Thinker;
+  pace?: ThinkingPace;
   onRun?: (metrics: RunMetrics, words: RunWords, thinker?: Thinker) => void;
 }
 
@@ -19,12 +21,12 @@ export interface BatchResult {
   summary: BatchSummary;
 }
 
-export function runBatch({ firstSeed, count, days, thinker, onRun }: BatchOptions): BatchResult {
+export function runBatch({ firstSeed, count, days, thinker, pace, onRun }: BatchOptions): BatchResult {
   const runs: RunMetrics[] = [];
   const words: RunWords[] = [];
   for (let i = 0; i < count; i++) {
     const t = thinker?.(firstSeed + i);
-    const result = runSimulation({ seed: firstSeed + i, days, keepEvents: true, thinker: t });
+    const result = runSimulation({ seed: firstSeed + i, days, keepEvents: true, thinker: t, pace });
     runs.push(computeMetrics(result));
     words.push(runWords(result));
     onRun?.(runs[i]!, words[i]!, t);
@@ -39,7 +41,7 @@ export function runBatch({ firstSeed, count, days, thinker, onRun }: BatchOption
  * depend on which run finished first.
  */
 export async function runBatchAsync(options: BatchOptions & { concurrency: number }): Promise<BatchResult> {
-  const { firstSeed, count, days, thinker, onRun } = options;
+  const { firstSeed, count, days, thinker, pace, onRun } = options;
   const runs: RunMetrics[] = new Array(count);
   const words: RunWords[] = new Array(count);
   let next = 0;
@@ -47,7 +49,7 @@ export async function runBatchAsync(options: BatchOptions & { concurrency: numbe
     while (next < count) {
       const i = next++;
       const t = thinker?.(firstSeed + i);
-      const result = await runSimulationAsync({ seed: firstSeed + i, days, keepEvents: true, thinker: t });
+      const result = await runSimulationAsync({ seed: firstSeed + i, days, keepEvents: true, thinker: t, pace });
       runs[i] = computeMetrics(result);
       words[i] = runWords(result);
       onRun?.(runs[i], words[i], t);
