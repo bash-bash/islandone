@@ -19,6 +19,9 @@ const DISCOVERIES = 40;
 const TRIES_SHOWN_FROM = 3;
 const TRIES_SHOWN = 10;
 const SET_ASIDE = 12;
+const LESSONS_SHOWN = 12;
+/** Open guesses kept; older unjudged ones are let go (counted as dropped). */
+const GUESSES_OPEN = 8;
 
 type Use = "drink" | "eat";
 
@@ -86,6 +89,10 @@ export class RoutineMind implements Mind {
   private readonly setAside: { approach: string; change: Change; day: number }[] = [];
   private readonly gaps: { id: string; problem: string; wants: string[]; day: number }[] = [];
   private gapCount = 0;
+  private readonly guesses: { id: string; expect: string; plan: string[]; day: number }[] = [];
+  private guessCount = 0;
+  private readonly lessons: { id: string; learned: string; day: number }[] = [];
+  private readonly lessonsUsed = new Set<string>();
 
   constructor(
     private readonly rng: Rng,
@@ -294,6 +301,49 @@ export class RoutineMind implements Mind {
       const gap = { id: `g${++this.gapCount}`, problem: missing.problem.trim(), wants: missing.wants.map((w) => w.trim()).filter(Boolean), day };
       this.gaps.push(gap);
       this.emit("gap.opened", { by, ...gap });
+    }
+    if (thought.stuck && thought.stuck.change !== "pause") {
+      this.emit("strategy.changed", { by, from: thought.stuck.approach.trim(), change: thought.stuck.change });
+    }
+    this.weighGuesses(thought, by, day);
+  }
+
+  /**
+   * Hypotheses and learning (Handoff §5, plan §4) in the thinker's own words.
+   * A guess comes with the plan meant to test it; the thinker later says
+   * whether it held and what it learned; a lesson becomes a learning event
+   * when a later thought says it builds on it. The mind only keeps the
+   * books: open guesses and lessons are shown back in later views.
+   */
+  private weighGuesses(thought: Thought, by: string, day: number): void {
+    for (const id of thought.using ?? []) {
+      const lesson = this.lessons.find((l) => l.id === id);
+      if (!lesson) continue;
+      this.emit("learning.applied", { by, use: "thought", chosen: id, instead: "", first: !this.lessonsUsed.has(id) });
+      this.lessonsUsed.add(id);
+    }
+    for (const verdict of thought.checked ?? []) {
+      const i = this.guesses.findIndex((g) => g.id === verdict.id);
+      if (i < 0) continue;
+      const [guess] = this.guesses.splice(i, 1);
+      this.emit("experiment.result", { by, hypothesis: guess!.id, success: verdict.held });
+      this.emit(verdict.held ? "hypothesis.supported" : "hypothesis.refuted", { by, hypothesis: guess!.id, expect: guess!.expect });
+      const learned = verdict.learned.trim();
+      if (learned) {
+        const lesson = { id: `l${this.lessons.length + 1}`, learned, day };
+        this.lessons.push(lesson);
+        this.emit("lesson", { by, hypothesis: guess!.id, ...lesson });
+      }
+    }
+    const expect = thought.guess?.trim();
+    if (expect) {
+      const guess = { id: `h${++this.guessCount}`, expect, plan: thought.plan.slice(0, 8).map(describeStep), day };
+      this.guesses.push(guess);
+      this.emit("hypothesis.proposed", { by, hypothesis: guess.id, expect, plan: guess.plan });
+      if (this.guesses.length > GUESSES_OPEN) {
+        const old = this.guesses.shift()!;
+        this.emit("hypothesis.dropped", { by, hypothesis: old.id, reason: "never judged" });
+      }
     }
   }
 
@@ -504,8 +554,8 @@ export class RoutineMind implements Mind {
     };
   }
 
-  /** Tries, set-aside approaches and open gaps, each only when there is something to show. */
-  private history(): Pick<MindView, "tries" | "setAside" | "gaps"> {
+  /** Tries, set-aside approaches, open gaps, guesses and lessons, each only when there is something to show. */
+  private history(): Pick<MindView, "tries" | "setAside" | "gaps" | "guesses" | "lessons"> {
     const tries = [...this.tries]
       .filter(([, t]) => t.times >= TRIES_SHOWN_FROM)
       .sort((a, b) => b[1].last - a[1].last || (a[0] < b[0] ? -1 : 1))
@@ -515,6 +565,8 @@ export class RoutineMind implements Mind {
       ...(tries.length > 0 ? { tries } : {}),
       ...(this.setAside.length > 0 ? { setAside: this.setAside.map((s) => ({ ...s })) } : {}),
       ...(this.gaps.length > 0 ? { gaps: this.gaps.map((g) => ({ ...g, wants: [...g.wants] })) } : {}),
+      ...(this.guesses.length > 0 ? { guesses: this.guesses.map((g) => ({ ...g, plan: [...g.plan] })) } : {}),
+      ...(this.lessons.length > 0 ? { lessons: this.lessons.slice(-LESSONS_SHOWN).map((l) => ({ ...l })) } : {}),
     };
   }
 

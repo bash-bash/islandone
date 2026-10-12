@@ -42,7 +42,11 @@ const Answer = z.object({
   plan: z.array(Step),
   stuck: z.object({ approach: z.string(), change: z.enum(CHANGES) }).nullable(),
   missing: z.object({ problem: z.string(), wants: z.array(z.string()) }).nullable(),
-  solved: z.array(z.string()).nullable(),
+  // Plain arrays and strings, empty when there is nothing to say: the API allows only 16 nullable fields.
+  solved: z.array(z.string()),
+  guess: z.string(),
+  checked: z.array(z.object({ id: z.string(), held: z.boolean(), learned: z.string() })),
+  using: z.array(z.string()),
 });
 
 export const SYSTEM_PROMPT = `Du bist das Denken einer Figur, die allein auf einer Insel gestrandet ist.
@@ -55,6 +59,7 @@ Du weißt nur, was die Figur selbst gesehen, gefühlt und erlebt hat. Das bekomm
 - thoughts: deine letzten eigenen Gedanken. reason und trigger: warum du gerade nachdenkst.
 - tries (wenn vorhanden): was du schon mehrmals selbst gemacht hast, wie oft und was dabei herauskam.
 - setAside und gaps (wenn vorhanden): Ansätze, bei denen du selbst gesagt hast, dass du feststeckst, und was dir nach deinen eigenen Worten noch fehlt.
+- guesses und lessons (wenn vorhanden): deine eigenen Vermutungen, über die du noch nicht geurteilt hast (mit dem Plan, mit dem du sie prüfen wolltest), und was du nach deinen eigenen Worten aus früheren Vermutungen gelernt hast.
 
 Deine Antwort: ein kurzer Gedanke in der Ich-Form auf Deutsch (text, 1 bis 3 Sätze, so wie man vor sich hin denkt), ein Ziel in eigenen Worten (goal) und die nächsten Schritte (plan, höchstens 6). Du darfst auch nur nachdenken und einen leeren Plan geben.
 
@@ -68,10 +73,13 @@ Schritte (alle nicht genannten Felder sind null):
 - put {item, onto}: ein gehaltenes Stück auf ein Ding hier legen.
 - rest {minutes}, idle {minutes}, sleep.
 
-Das Folgende sagst du nur, wenn du es selbst so siehst (sonst null):
+Das Folgende sagst du nur, wenn du es selbst so siehst (sonst null, eine leere Liste oder ein leerer Text):
 - stuck {approach, change}: Du merkst, dass du mit einem Ansatz nicht weiterkommst. approach beschreibt ihn in eigenen Worten; change sagt, was du stattdessen änderst: material (anderes Material), shape (andere Form), place (anderer Ort), method (andere Vorgehensweise) oder pause (das Problem erst einmal ruhen lassen).
-- missing {problem, wants}: Dir fehlt für ein Problem etwas, das keines der Dinge, die du kennst, gut genug kann. problem in eigenen Worten; wants die Eigenschaften, die das Fehlende haben müsste (zum Beispiel "hält länger als das, was ich habe"), nicht wie es heißt.
+- missing {problem, wants}: Dir fehlt für ein Problem etwas, das keines der Dinge, die du kennst, gut genug kann. problem in eigenen Worten; wants die Eigenschaften, die das Fehlende haben müsste (zum Beispiel "hält länger als das, was ich habe"), nicht wie es heißt. Was schon in gaps steht, nennst du nicht noch einmal.
 - solved: Kennungen aus gaps, die du jetzt als gelöst ansiehst.
+- guess: Du vermutest, was beim Plan passieren wird, und willst es damit herausfinden. In eigenen Worten (zum Beispiel "wenn ich das Holz lange reibe, wird es warm"). Nur wenn du wirklich etwas über die Welt herausfinden willst, nicht für jeden Plan.
+- checked [{id, held, learned}]: Du siehst an dem, was passiert ist, ob eine Vermutung aus guesses gestimmt hat (held) und was du daraus über die Welt mitnimmst (learned, ein Satz; leer, wenn es nichts Neues ist).
+- using: Kennungen aus lessons, auf die du dich bei diesem Gedanken und Plan stützt.
 
 Die Welt entscheidet, was passiert; du erfährst es danach. Niemand sagt dir, wozu etwas gut ist. Sei neugierig, probiere aus, zieh Schlüsse aus dem, was passiert ist, und verfolge, was dir wichtig erscheint. Wenn Durst oder Hunger sehr stark werden, kümmert sich der Körper von selbst darum.`;
 
@@ -84,7 +92,7 @@ export interface LlmThinkerOptions {
 export class LlmThinker implements Thinker {
   readonly name: string;
   private readonly client: Anthropic;
-  private readonly model: string;
+  readonly model: string;
   private readonly effort: NonNullable<LlmThinkerOptions["effort"]>;
   /** Tokens summed over every call, to see what a run costs. */
   readonly usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
@@ -97,11 +105,12 @@ export class LlmThinker implements Thinker {
   }
 
   async think(view: MindView): Promise<Thought> {
+    // Haiku has no server-side fallback for refusals; a refusal is answered below like an empty thought.
+    const fallback = this.model.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
     const response = await this.client.beta.messages.parse({
       model: this.model,
       max_tokens: 8000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      ...fallback,
       output_config: { effort: this.effort, format: betaZodOutputFormat(Answer) },
       system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: JSON.stringify(view) }],
@@ -118,7 +127,21 @@ export class LlmThinker implements Thinker {
   }
 }
 
-function createClient(): Anthropic {
+/** Dollars per million tokens (input, output, cache read, cache write), from the published price list. */
+const PRICES: Record<string, [number, number, number, number]> = {
+  "claude-sonnet-5-5": [2, 10, 0.2, 2.5],
+  "claude-haiku-5-5": [0.1, 0.5, 0.01, 0.125],
+  "claude-opus-5-5": [4, 20, 0.2, 5],
+};
+
+/** What the tokens of a run cost, in dollars; null for a model without a known price. */
+export function costOf(model: string, usage: LlmThinker["usage"]): number | null {
+  const p = PRICES[model];
+  if (!p) return null;
+  return (usage.input * p[0] + usage.output * p[1] + usage.cacheRead * p[2] + usage.cacheWrite * p[3]) / 1e6;
+}
+
+export function createClient(): Anthropic {
   const apiKey = process.env.ISLAND_SIM_API_KEY;
   if (!apiKey) return new Anthropic();
   return new Anthropic({ apiKey, baseURL: process.env.ISLAND_SIM_BASE_URL ?? "https://api.anthropic.com" });
@@ -134,6 +157,9 @@ export function toThought(answer: z.infer<typeof Answer>): Thought {
   const thought: Thought = { text: answer.text, goal: answer.goal ?? undefined, plan };
   if (answer.stuck) thought.stuck = answer.stuck;
   if (answer.missing) thought.missing = answer.missing;
-  if (answer.solved?.length) thought.solved = answer.solved;
+  if (answer.solved.length) thought.solved = answer.solved;
+  if (answer.guess.trim()) thought.guess = answer.guess;
+  if (answer.checked.length) thought.checked = answer.checked;
+  if (answer.using.length) thought.using = answer.using;
   return thought;
 }
