@@ -3,16 +3,20 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { summaryMarkdown } from "./analytics/summary";
 import { runBatch } from "./batch";
+import { CuriousThinker } from "./thinkers/curious";
 
 const HELP = `island-sim – Simulation ohne Grafik
 
-  npm run sim -- [--seeds 100] [--days 30] [--first-seed 1] [--out out] [--check]
+  npm run sim -- [--seeds 100] [--days 30] [--first-seed 1] [--out out] [--check] [--thinker rules|curious]
 
   --seeds       Anzahl der Läufe (Seeds first-seed … first-seed+seeds-1)
   --days        virtuelle Tage pro Lauf
   --first-seed  erster Seed
   --out         Ordner für run-<seed>.json, summary.json, summary.md
   --check       alles zweimal rechnen und die Fingerabdrücke vergleichen
+  --thinker     wer in der freien Zeit denkt: rules (eingebaute Regeln aus Etappe 4)
+                oder curious (neugieriger Ersatz für das LLM, kein Rezept).
+                Läufe mit Claude: npm run story
 `;
 
 function main(): number {
@@ -23,6 +27,7 @@ function main(): number {
       "first-seed": { type: "string", default: "1" },
       out: { type: "string", default: "out" },
       check: { type: "boolean", default: false },
+      thinker: { type: "string", default: "rules" },
       help: { type: "boolean", short: "h", default: false },
     },
   });
@@ -34,8 +39,10 @@ function main(): number {
   const days = toInt(values.days, "--days");
   const firstSeed = toInt(values["first-seed"], "--first-seed");
 
+  if (values.thinker !== "rules" && values.thinker !== "curious") throw new Error(`--thinker braucht rules oder curious, bekam "${values.thinker}"`);
+  const thinker = values.thinker === "curious" ? () => new CuriousThinker() : undefined;
   const started = performance.now();
-  const { runs, summary } = runBatch({ firstSeed, count, days });
+  const { runs, summary } = runBatch({ firstSeed, count, days, thinker });
   const seconds = (performance.now() - started) / 1000;
 
   mkdirSync(values.out, { recursive: true });
@@ -47,7 +54,7 @@ function main(): number {
   process.stdout.write(`\n${count} Läufe in ${seconds.toFixed(1)} s, Ergebnisse in ${values.out}/\n`);
 
   if (values.check) {
-    const again = runBatch({ firstSeed, count, days });
+    const again = runBatch({ firstSeed, count, days, thinker });
     const same = again.summary.batchFingerprint === summary.batchFingerprint;
     process.stdout.write(same ? "Reproduzierbar: ja\n" : "Reproduzierbar: NEIN – zweiter Durchlauf weicht ab\n");
     if (!same) return 1;

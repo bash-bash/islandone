@@ -29,6 +29,16 @@ describe("epistemic firewall (Handoff §5, §28, §36)", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it("thinkers (rules or LLM) never import the world or perception", () => {
+    const offenders: string[] = [];
+    for (const file of files(join(SRC, "thinkers"))) {
+      for (const spec of imports(file)) {
+        if (spec.includes("/world/") || spec.includes("/perception/")) offenders.push(`${relative(SRC, file)} -> ${spec}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe("determinism hygiene", () => {
@@ -48,3 +58,28 @@ describe("determinism hygiene", () => {
 function stripComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 }
+
+describe("observations carry no hidden world facts (Handoff §5, §36)", () => {
+  it("never mentions thing kinds, place labels or exact body numbers", async () => {
+    const { runSimulation } = await import("../src/sim");
+    const { THING_SPECS, PLACES } = await import("../src/world/island");
+    const forbidden = new Set<string>([...THING_SPECS.map((t) => t.kind), ...PLACES.map((p) => p.label)]);
+    const seen: unknown[] = [];
+    const spy = () => ({
+      observe(observations: readonly unknown[]) {
+        seen.push(...observations);
+      },
+      decide: () => ({ kind: "move", to: ["p2", "p3", "p5", "p1"][seen.length % 4]!, purpose: "explore" }) as const,
+    });
+    runSimulation({ seed: 3, days: 3, createMind: spy });
+    expect(seen.length).toBeGreaterThan(50);
+    const offenders: string[] = [];
+    const walk = (v: unknown, path: string): void => {
+      if (typeof v === "string" && forbidden.has(v)) offenders.push(`${path} = ${v}`);
+      if (typeof v === "number" && !Number.isInteger(v)) offenders.push(`${path} = ${v} (exact value)`);
+      if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) walk(x, `${path}.${k}`);
+    };
+    seen.forEach((o, i) => walk(o, `obs[${i}]`));
+    expect(offenders).toEqual([]);
+  });
+});
