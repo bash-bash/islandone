@@ -29,6 +29,8 @@ Ausgabe in `out/`: `run-<seed>.json` je Lauf, `summary.json` und `summary.md` ü
 
 ```bash
 export ANTHROPIC_API_KEY=...           # oder ein Profil über `ant auth login`
+# In einer Claude-Code-Cloud-Session stattdessen ISLAND_SIM_API_KEY als Umgebungsvariable
+# der Umgebung setzen: ANTHROPIC_API_KEY und ANTHROPIC_BASE_URL gehören dort Claude Code selbst.
 export ISLAND_SIM_MODEL=claude-opus-5-5 # Standard; claude-haiku-5-5 ist deutlich günstiger
 export ISLAND_SIM_EFFORT=low           # Denktiefe pro Moment: low, medium, high
 npm run story -- --seed 1 --days 3 --thinker llm

@@ -13,7 +13,10 @@ import type { MindView, PlanStep, Thinker, Thought } from "../mind/thinking";
  * new taste the way a person would, and the world decides what happens.
  *
  * Model and effort come from ISLAND_SIM_MODEL / ISLAND_SIM_EFFORT; credentials
- * from the environment (ANTHROPIC_API_KEY or an `ant auth login` profile).
+ * from ISLAND_SIM_API_KEY, else the environment (ANTHROPIC_API_KEY or an
+ * `ant auth login` profile). ISLAND_SIM_API_KEY exists because a Claude Code
+ * session keeps ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL for itself; with it the
+ * base URL is the public API (or ISLAND_SIM_BASE_URL), never the inherited one.
  */
 
 const STEP_KINDS = ["move", "drink", "eat", "take", "drop", "bind", "build", "tie", "rub", "put", "rest", "idle", "sleep"] as const;
@@ -77,7 +80,7 @@ export class LlmThinker implements Thinker {
   constructor(options: LlmThinkerOptions = {}) {
     this.model = options.model ?? process.env.ISLAND_SIM_MODEL ?? "claude-opus-5-5";
     this.effort = options.effort ?? (process.env.ISLAND_SIM_EFFORT as LlmThinkerOptions["effort"]) ?? "low";
-    this.client = options.client ?? new Anthropic();
+    this.client = options.client ?? createClient();
     this.name = `llm:${this.model}`;
   }
 
@@ -96,6 +99,12 @@ export class LlmThinker implements Thinker {
     }
     return toThought(response.parsed_output);
   }
+}
+
+function createClient(): Anthropic {
+  const apiKey = process.env.ISLAND_SIM_API_KEY;
+  if (!apiKey) return new Anthropic();
+  return new Anthropic({ apiKey, baseURL: process.env.ISLAND_SIM_BASE_URL ?? "https://api.anthropic.com" });
 }
 
 /** Drops the null fields of the structured answer. */
