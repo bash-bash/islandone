@@ -169,12 +169,13 @@ async function backlog(batches: Batch[], creator: Creator): Promise<string[]> {
     try {
       judged.push({ ...g, verdict: await creator.check(g) });
     } catch (error) {
-      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      if (!(error instanceof Error && error.message.startsWith("no recorded Creator verdict"))) throw error;
     }
   }
   const count = (v: string) => judged.filter((j) => j.verdict.verdict === v).length;
   lines.push(
     `${found.size} verschiedene Lücken, ${judged.length} geprüft: ${count("exists")} gibt es schon in der Welt, ${count("latent")} nur latent, ${count("missing")} fehlen wirklich.`,
+    ...(judged.length < found.size ? [``, `${found.size - judged.length} Lücken ohne aufgezeichnetes Urteil sind nicht geprüft (mit \`--creator ask\` prüfen).`] : []),
     ``,
   );
   const missing = judged.filter((j) => j.verdict.verdict === "missing");
