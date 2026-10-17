@@ -49,6 +49,19 @@ export interface Thought {
   missing?: { problem: string; wants: string[] };
   /** Ids of earlier gaps it now considers met. */
   solved?: string[];
+  /**
+   * A hypothesis (Handoff §5), in the thinker's own words: what it expects to
+   * happen when it does the plan it gives with it. The world decides; the
+   * thinker judges later, in `checked`, whether it held.
+   */
+  guess?: string;
+  /** Its own verdict on earlier guesses, and what it takes away from each. */
+  checked?: { id: string; held: boolean; learned: string }[];
+  /**
+   * Ids of earlier lessons this thought builds on. A lesson counts as a learning
+   * event (plan §4) only once a later thought says it builds on it.
+   */
+  using?: string[];
 }
 
 /** What a stuck character can change (Handoff §5, Strategy Fatigue). */
@@ -86,6 +99,10 @@ export interface MindView {
   setAside?: { approach: string; change: Change; day: number }[];
   /** Capabilities it has itself said it lacks and has not yet found. */
   gaps?: { id: string; problem: string; wants: string[]; day: number }[];
+  /** Its own guesses it has not yet judged, with the plan each came with. */
+  guesses?: { id: string; expect: string; plan: string[]; day: number }[];
+  /** What it has said it took away from its guesses, newest last. */
+  lessons?: { id: string; learned: string; day: number }[];
 }
 
 export interface Thinker {

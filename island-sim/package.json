@@ -7,7 +7,8 @@
     "sim": "tsx src/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "story": "tsx src/story.ts"
+    "story": "tsx src/story.ts",
+    "report": "tsx src/report.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

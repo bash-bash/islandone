@@ -10,15 +10,33 @@ import type { Action, Features, Feelings, Mind, MindEvent, Observation, Purpose 
 /** How the character's free time is spent: built-in rules (stage 4) or an external Thinker (stage 5). */
 export type ThinkingMode = "rules" | "external";
 
-/** Minimum minutes between unprompted thoughts, and a daily cap (keeps an LLM affordable). */
-const THINK_GAP = 30;
-const THINKS_PER_DAY = 60;
+/**
+ * How often the character stops to think (keeps an LLM affordable).
+ * gap: minimum minutes between unprompted thoughts; perDay: daily cap;
+ * planSteps: longest plan followed; calmGap: minutes a finished plan waits
+ * before the next thought (0: think right away). Surprises, setbacks and
+ * waking up are always thought about, within the daily cap.
+ */
+export interface ThinkingPace {
+  gap: number;
+  perDay: number;
+  planSteps: number;
+  calmGap: number;
+}
+
+/** Stage 5: think whenever a plan is done. */
+export const EAGER_PACE: ThinkingPace = { gap: 30, perDay: 60, planSteps: 8, calmGap: 0 };
+/** Stage 6, for cost: longer plans, and a finished plan waits an hour since the last thought. */
+export const FRUGAL_PACE: ThinkingPace = { gap: 60, perDay: 24, planSteps: 12, calmGap: 60 };
 const RECENT = 24;
 const DISCOVERIES = 40;
 /** How often a planned step must have been done before it shows up in the thinker's tries. */
 const TRIES_SHOWN_FROM = 3;
 const TRIES_SHOWN = 10;
 const SET_ASIDE = 12;
+const LESSONS_SHOWN = 12;
+/** Open guesses kept; older unjudged ones are let go (counted as dropped). */
+const GUESSES_OPEN = 8;
 
 type Use = "drink" | "eat";
 
@@ -86,10 +104,15 @@ export class RoutineMind implements Mind {
   private readonly setAside: { approach: string; change: Change; day: number }[] = [];
   private readonly gaps: { id: string; problem: string; wants: string[]; day: number }[] = [];
   private gapCount = 0;
+  private readonly guesses: { id: string; expect: string; plan: string[]; day: number }[] = [];
+  private guessCount = 0;
+  private readonly lessons: { id: string; learned: string; day: number }[] = [];
+  private readonly lessonsUsed = new Set<string>();
 
   constructor(
     private readonly rng: Rng,
     private readonly thinking: ThinkingMode = "rules",
+    private readonly pace: ThinkingPace = EAGER_PACE,
   ) {
     const self = this;
     const host: InquiryHost = {
@@ -248,9 +271,11 @@ export class RoutineMind implements Mind {
     if (this.thinking !== "external") return null;
     const day = Math.floor(this.now / 1440);
     if (this.thinksToday.day !== day) this.thinksToday = { day, count: 0 };
-    if (this.thinksToday.count >= THINKS_PER_DAY) return null;
+    if (this.thinksToday.count >= this.pace.perDay) return null;
     let reason = this.thinkReason;
-    if (!reason && !this.plan && this.now - this.lastThink >= THINK_GAP && Math.max(this.feelings.thirst, this.feelings.hunger) < 3) {
+    // A finished plan can wait a while; the body looks after itself meanwhile.
+    if ((reason === "plan done" || reason === "free") && this.now - this.lastThink < this.pace.calmGap) return null;
+    if (!reason && !this.plan && this.now - this.lastThink >= this.pace.gap && Math.max(this.feelings.thirst, this.feelings.hunger) < 3) {
       reason = this.wasAsleep ? "woke" : "free";
     }
     if (!reason) return null;
@@ -262,7 +287,7 @@ export class RoutineMind implements Mind {
     this.lastThink = this.now;
     this.thinkReason = null;
     this.thinkTrigger = undefined;
-    const plan = thought.plan.slice(0, 8);
+    const plan = thought.plan.slice(0, this.pace.planSteps);
     this.plan = plan.length > 0 ? { goal: thought.goal, steps: plan, done: 0 } : null;
     this.thoughts.push({ text: thought.text, goal: thought.goal });
     if (this.thoughts.length > 8) this.thoughts.shift();
@@ -295,6 +320,49 @@ export class RoutineMind implements Mind {
       this.gaps.push(gap);
       this.emit("gap.opened", { by, ...gap });
     }
+    if (thought.stuck && thought.stuck.change !== "pause") {
+      this.emit("strategy.changed", { by, from: thought.stuck.approach.trim(), change: thought.stuck.change });
+    }
+    this.weighGuesses(thought, by, day);
+  }
+
+  /**
+   * Hypotheses and learning (Handoff §5, plan §4) in the thinker's own words.
+   * A guess comes with the plan meant to test it; the thinker later says
+   * whether it held and what it learned; a lesson becomes a learning event
+   * when a later thought says it builds on it. The mind only keeps the
+   * books: open guesses and lessons are shown back in later views.
+   */
+  private weighGuesses(thought: Thought, by: string, day: number): void {
+    for (const id of thought.using ?? []) {
+      const lesson = this.lessons.find((l) => l.id === id);
+      if (!lesson) continue;
+      this.emit("learning.applied", { by, use: "thought", chosen: id, instead: "", first: !this.lessonsUsed.has(id) });
+      this.lessonsUsed.add(id);
+    }
+    for (const verdict of thought.checked ?? []) {
+      const i = this.guesses.findIndex((g) => g.id === verdict.id);
+      if (i < 0) continue;
+      const [guess] = this.guesses.splice(i, 1);
+      this.emit("experiment.result", { by, hypothesis: guess!.id, success: verdict.held });
+      this.emit(verdict.held ? "hypothesis.supported" : "hypothesis.refuted", { by, hypothesis: guess!.id, expect: guess!.expect });
+      const learned = verdict.learned.trim();
+      if (learned) {
+        const lesson = { id: `l${this.lessons.length + 1}`, learned, day };
+        this.lessons.push(lesson);
+        this.emit("lesson", { by, hypothesis: guess!.id, ...lesson });
+      }
+    }
+    const expect = thought.guess?.trim();
+    if (expect) {
+      const guess = { id: `h${++this.guessCount}`, expect, plan: thought.plan.slice(0, this.pace.planSteps).map(describeStep), day };
+      this.guesses.push(guess);
+      this.emit("hypothesis.proposed", { by, hypothesis: guess.id, expect, plan: guess.plan });
+      if (this.guesses.length > GUESSES_OPEN) {
+        const old = this.guesses.shift()!;
+        this.emit("hypothesis.dropped", { by, hypothesis: old.id, reason: "never judged" });
+      }
+    }
   }
 
   private decideWithThoughts(): Action {
@@ -313,7 +381,7 @@ export class RoutineMind implements Mind {
       if (action) return action;
     }
     if (dark && f.tired >= 1) return { kind: "sleep", purpose: "sleep" };
-    return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: THINK_GAP, purpose: "idle" };
+    return f.tired >= 2 ? { kind: "rest", minutes: 30, purpose: "rest" } : { kind: "idle", minutes: this.pace.gap, purpose: "idle" };
   }
 
   private mostUrgent(dark: boolean): { goal: Purpose; level: number } {
@@ -504,8 +572,8 @@ export class RoutineMind implements Mind {
     };
   }
 
-  /** Tries, set-aside approaches and open gaps, each only when there is something to show. */
-  private history(): Pick<MindView, "tries" | "setAside" | "gaps"> {
+  /** Tries, set-aside approaches, open gaps, guesses and lessons, each only when there is something to show. */
+  private history(): Pick<MindView, "tries" | "setAside" | "gaps" | "guesses" | "lessons"> {
     const tries = [...this.tries]
       .filter(([, t]) => t.times >= TRIES_SHOWN_FROM)
       .sort((a, b) => b[1].last - a[1].last || (a[0] < b[0] ? -1 : 1))
@@ -515,6 +583,8 @@ export class RoutineMind implements Mind {
       ...(tries.length > 0 ? { tries } : {}),
       ...(this.setAside.length > 0 ? { setAside: this.setAside.map((s) => ({ ...s })) } : {}),
       ...(this.gaps.length > 0 ? { gaps: this.gaps.map((g) => ({ ...g, wants: [...g.wants] })) } : {}),
+      ...(this.guesses.length > 0 ? { guesses: this.guesses.map((g) => ({ ...g, plan: [...g.plan] })) } : {}),
+      ...(this.lessons.length > 0 ? { lessons: this.lessons.slice(-LESSONS_SHOWN).map((l) => ({ ...l })) } : {}),
     };
   }
 
