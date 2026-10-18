@@ -158,4 +158,28 @@ describe("a thinker decides what to do with free time (plan stage 5)", () => {
     expect(m.capabilityGapsOpen).toBe(0);
     expect(m.longestSameTry).toBeGreaterThanOrEqual(3);
   });
+
+  it("hypotheses, verdicts and learning come from the thinker's own words; a lesson counts once a later thought builds on it", () => {
+    const views: MindView[] = [];
+    const scientist: Thinker = {
+      name: "scientist",
+      think(view: MindView): Thought {
+        views.push(view);
+        const open = view.guesses?.[0];
+        const lesson = view.lessons?.[0];
+        if (open) return { text: "Hat nicht geklappt.", plan: [], checked: [{ id: open.id, held: false, learned: "Ausruhen allein macht nicht warm." }] };
+        if (lesson && views.length < 6) return { text: "Also anders.", plan: [{ kind: "idle", minutes: 30 }], using: [lesson.id, "l99"] };
+        if (!lesson) return { text: "Vielleicht wird mir warm, wenn ich ruhe.", plan: [{ kind: "rest", minutes: 30 }], guess: "Ausruhen macht warm" };
+        return { text: "Hm.", plan: [{ kind: "idle", minutes: 30 }] };
+      },
+    };
+    const m = computeMetrics(runSimulation({ seed: 1, days: 1, keepEvents: true, thinker: scientist }));
+    expect(views.find((v) => v.guesses)?.guesses?.[0]).toMatchObject({ id: "h1", expect: "Ausruhen macht warm", plan: ["rest minutes=30"] });
+    expect(views.find((v) => v.lessons)?.lessons?.[0]).toMatchObject({ id: "l1", learned: "Ausruhen allein macht nicht warm." });
+    expect(m.hypothesesProposed).toBe(1);
+    expect(m.hypothesesTested).toBe(1);
+    expect(m.hypothesesRefuted).toBe(1);
+    expect(m.learningEvents).toBe(1);
+    expect(m.decisionsShapedByLearning).toBeGreaterThanOrEqual(2);
+  });
 });

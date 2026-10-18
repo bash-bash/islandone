@@ -198,3 +198,29 @@ function round(v: number, digits: number): number {
   const f = 10 ** digits;
   return Math.round(v * f) / f;
 }
+
+/**
+ * What the thinker said in its own words over a run, for the report and the
+ * Creator Backlog (Handoff §9): the capability gaps it named and the lessons
+ * it drew. Kept out of RunMetrics because it is text, not a number.
+ */
+export interface RunWords {
+  gaps: { id: string; day: number; problem: string; wants: string[]; closed: boolean }[];
+  lessons: { id: string; day: number; learned: string; used: boolean }[];
+  firstThoughts: string[];
+}
+
+export function runWords(result: SimResult): RunWords {
+  const gaps: RunWords["gaps"] = [];
+  const lessons: RunWords["lessons"] = [];
+  const firstThoughts: string[] = [];
+  for (const e of result.log.all()) {
+    const d = e.data ?? {};
+    if (e.type === "gap.opened") gaps.push({ id: d.id as string, day: d.day as number, problem: d.problem as string, wants: d.wants as string[], closed: false });
+    if (e.type === "gap.closed") for (const g of gaps) if (g.id === d.id) g.closed = true;
+    if (e.type === "lesson") lessons.push({ id: d.id as string, day: d.day as number, learned: d.learned as string, used: false });
+    if (e.type === "learning.applied") for (const l of lessons) if (l.id === d.chosen) l.used = true;
+    if (e.type === "thought" && firstThoughts.length < 3) firstThoughts.push(d.text as string);
+  }
+  return { gaps, lessons, firstThoughts };
+}

@@ -59,6 +59,14 @@ async function main(): Promise<number> {
       lines.push(`  ◇ Es fehlt (${String(d.id)}): ${String(d.problem)}; bräuchte: ${(d.wants as string[]).join(", ")}`);
     } else if (e.type === "gap.closed") {
       lines.push(`  ◆ Gelöst (${String(d.id)}): ${String(d.problem)}`);
+    } else if (e.type === "hypothesis.proposed" && d.by) {
+      lines.push(`  ? Vermute (${String(d.hypothesis)}): ${String(d.expect)}`);
+    } else if ((e.type === "hypothesis.supported" || e.type === "hypothesis.refuted") && d.by) {
+      lines.push(`  ${e.type === "hypothesis.supported" ? "✓ Stimmt" : "✗ Stimmt nicht"} (${String(d.hypothesis)}): ${String(d.expect)}`);
+    } else if (e.type === "lesson") {
+      lines.push(`  ! Gelernt (${String(d.id)}): ${String(d.learned)}`);
+    } else if (e.type === "learning.applied" && d.first) {
+      lines.push(`  → baut auf ${String(d.chosen)} auf`);
     } else if (e.type === "action.end" && d.purpose === "plan" && d.kind !== "idle") {
       const what = d.rub ?? d.put ?? (d.success ? "ok" : `fehlgeschlagen (${String(d.reason)})`);
       lines.push(`  ${at} ${String(d.kind)}: ${String(what)}`);

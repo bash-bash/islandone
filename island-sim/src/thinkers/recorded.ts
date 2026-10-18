@@ -21,7 +21,7 @@ export class RecordedThinker implements Thinker {
 
   constructor(
     private readonly file: string,
-    private readonly inner: Thinker | null,
+    readonly inner: Thinker | null,
   ) {
     this.name = inner?.name ?? "replay";
     if (existsSync(file)) {
