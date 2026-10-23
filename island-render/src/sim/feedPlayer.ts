@@ -7,12 +7,22 @@ import { spotOf } from "./placeMap";
 
 // Plays island-sim's live feed (plan stage 7): moves the figure with `goTo` and fills the HUD.
 // Without `startedAt` in the feed the clock starts at the feed's first tick when the page
-// loads; ?speed=60 plays it 60 times faster. With `startedAt` (a live island) the clock is the
-// real one: one island day per 11 hours.
+// loads; ?speed=60 plays it 60 times faster. With `startedAt` (the live island on Vercel) the
+// clock is the real one, one island day per 11 hours, and the feed is fetched again regularly.
 
-/** ?feed=feeds/seed-3.json, relative to the page. */
+const REFETCH_MS = 30_000;
+
+/** ?feed=feeds/seed-3.json (relative to the page), else the live island when built for Vercel. */
 export function feedUrl(): string | null {
-  return new URLSearchParams(location.search).get("feed");
+  return new URLSearchParams(location.search).get("feed") ?? (import.meta.env.VITE_LIVE_FEED as string | undefined) ?? null;
+}
+
+async function load(url: string): Promise<Feed> {
+  const res = await fetch(url, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`feed ${url}: ${res.status}`);
+  const feed = (await res.json()) as Feed;
+  if (feed.version !== 1 || feed.frames.length === 0) throw new Error(`feed ${url}: unknown version or empty`);
+  return feed;
 }
 
 const TITLES: Record<MomentKind, string> = {
@@ -31,16 +41,12 @@ const TITLES: Record<MomentKind, string> = {
 };
 
 export async function startFeedPlayer(character: Character, url: string): Promise<() => void> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`feed ${url}: ${res.status}`);
-  const feed = (await res.json()) as Feed;
-  if (feed.version !== 1 || feed.frames.length === 0) throw new Error(`feed ${url}: unknown version or empty`);
+  let feed = await load(url);
   const speed = Number(new URLSearchParams(location.search).get("speed")) || 1;
   const loadedAt = performance.now();
-  const startedAt = feed.startedAt;
   const tickNow = () =>
-    startedAt !== undefined
-      ? (Date.now() - startedAt) / feed.msPerTick
+    feed.startedAt !== undefined
+      ? (Date.now() - feed.startedAt) / feed.msPerTick
       : feed.fromTick + ((performance.now() - loadedAt) / feed.msPerTick) * speed;
 
   const ground = (x: number, z: number) => new Vector3(x, terrainHeight(x, z), z);
@@ -83,7 +89,23 @@ export async function startFeedPlayer(character: Character, url: string): Promis
   };
   step();
   const id = window.setInterval(step, 250);
-  return () => window.clearInterval(id);
+  // A live island moves on: fetch the newest stretch now and then (a failed fetch keeps the old one).
+  const refetch =
+    feed.startedAt !== undefined
+      ? window.setInterval(() => {
+          load(url).then(
+            (next) => {
+              feed = next;
+              lastMoment = -1;
+            },
+            (err) => console.warn(err),
+          );
+        }, REFETCH_MS)
+      : 0;
+  return () => {
+    window.clearInterval(id);
+    window.clearInterval(refetch);
+  };
 }
 
 function clock(tick: number) {
