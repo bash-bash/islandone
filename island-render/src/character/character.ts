@@ -11,9 +11,9 @@ import "@babylonjs/loaders/glTF";
 import { moveWithCollision, type CollisionWorld } from "./collision";
 
 // IO_Character_A (assets/character/character.json): 1.75 m, Mixamo skeleton, faces +Z.
-// IslandOne's figure is autonomous; the viewer watches and does not steer it. Until
-// island-sim drives it through `goTo`, it wanders between camp spots on its own and idles in
-// between. Walks straight and slides along obstacles (collision.ts); no path finding.
+// IslandOne's figure is autonomous; the viewer watches and does not steer it. island-sim
+// drives it through `goTo` (src/sim/feedPlayer.ts); without a feed it wanders between camp
+// spots on its own and idles in between. Walks straight and slides along obstacles (collision.ts); no path finding.
 
 const URL = import.meta.env.BASE_URL + "assets/character/IO_Character_A.glb";
 const WALK_SPEED = 1.25; // m/s, matches the in-place Walk clip at this scale
@@ -31,8 +31,10 @@ const SPOTS: [number, number][] = [
 
 export interface Character {
   root: TransformNode;
-  /** Walk to a point on the ground (the hook for island-sim). */
+  /** Walk to a point on the ground (the hook for island-sim). Stops the stand-in wandering for good. */
   goTo(point: Vector3): void;
+  /** Whether it is still on its way to the last goTo point. */
+  readonly walking: boolean;
   setCollision(world: CollisionWorld): void;
   update(dt: number): void;
 }
@@ -81,12 +83,17 @@ export async function createCharacter(
   let stuckFor = 0;
   let idleFor = 1;
   let spot = 0;
+  let wander = true;
 
   return {
     root,
     goTo(point) {
       target = point.clone();
       stuckFor = 0;
+      wander = false;
+    },
+    get walking() {
+      return target !== null;
     },
     setCollision(w) {
       world = w;
@@ -105,7 +112,7 @@ export async function createCharacter(
           move = to;
           speed = Math.min(speed, dist / Math.max(dt, 1e-3));
         }
-      } else if ((idleFor -= dt) <= 0) {
+      } else if (wander && (idleFor -= dt) <= 0) {
         spot = (spot + 1 + Math.floor(Math.random() * (SPOTS.length - 1))) % SPOTS.length;
         const [x, z] = SPOTS[spot];
         target = new Vector3(x, 0, z);

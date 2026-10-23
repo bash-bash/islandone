@@ -8,7 +8,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "story": "tsx src/story.ts",
-    "report": "tsx src/report.ts"
+    "report": "tsx src/report.ts",
+    "feed": "tsx src/live/cli.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
