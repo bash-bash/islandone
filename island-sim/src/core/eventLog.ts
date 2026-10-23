@@ -17,9 +17,13 @@ export class EventLog {
   private readonly hash = new StreamHash();
   private size = 0;
 
-  constructor(private readonly keepEvents = true) {}
+  constructor(
+    private readonly keepEvents = true,
+    private readonly listener?: (event: SimEvent) => void,
+  ) {}
 
   push(event: SimEvent): void {
+    this.listener?.(event);
     this.hash.update(canonicalJson(event));
     this.hash.update("\n");
     if (this.keepEvents) this.events.push(event);

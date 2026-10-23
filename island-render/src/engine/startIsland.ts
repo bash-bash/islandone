@@ -2,6 +2,8 @@ import { type AbstractMesh, Mesh, Scene, SceneInstrumentation, Vector3 } from "@
 import { createCharacter, type Character } from "../character/character";
 import { buildCollisionWorld, type CollisionWorld } from "../character/collision";
 import { createCharacterPlaceholder } from "../character/placeholder";
+import { feedUrl, startFeedPlayer } from "../sim/feedPlayer";
+import { startFigureStub } from "../ui/figureState";
 import { createCaustics } from "../water/caustics";
 import { buildFoamField } from "../water/foamField";
 import { createWater } from "../water/water";
@@ -141,6 +143,15 @@ export async function startIsland(canvas: HTMLCanvasElement) {
         }),
     );
     (character as Character | null)?.setCollision(collision);
+    // ?feed=…: island-sim drives the figure and the HUD (plan stage 7).
+    const feed = feedUrl();
+    const figure = character as Character | null;
+    if (feed && figure)
+      startFeedPlayer(figure, feed).catch((err) => {
+        // No feed (yet): keep the stand-in figure and HUD.
+        console.warn("island-sim feed unavailable, using the stand-in", err);
+        startFigureStub();
+      });
     await precompileShaders(scene, shadows);
     statsStore.set({ ready: true, memory: measureMemory(engine, scene) });
   } catch (err) {

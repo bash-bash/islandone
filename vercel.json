@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix island-sim && npm ci --prefix island-render",
+  "buildCommand": "node island-sim/scripts/build-vercel.mjs"
+}
