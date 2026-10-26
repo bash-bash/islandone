@@ -11,6 +11,7 @@ Stand: 26.10.2026. Anlass: Chris hat die Live-Insel angehalten (`ETAPPE_7_PLAN.m
 
 ## 2. Teil A: Die Insel beginnt leer (Code, braucht keine neuen Modelle)
 
+0. **Eine Inselkarte für beide (Entscheidung Chris, 26.10.2026).** Chris designt die Insel einmal fertig. Was wo steht (jede Palme, jeder Fels, jede Fundstelle), steht danach in einer Inselkarte, einer Datei, die Simulation und Bild gemeinsam lesen. Treibholz gibt es nur am Spülsaum, Äste und Faserpflanzen nur am Waldrand usw. Die Figur sieht die Karte nie: Sie bekommt wie bisher nur, was sie gerade wahrnimmt, und muss selbst herausfinden, was etwas ist und wozu es taugt.
 1. **Natur und Camp trennen.** `beachLayout.ts` stellt nur noch Natur hin: Gelände, Palmen, Felsen, Büsche, Gras, Farn, Kiesel. Hütte, Werkbank, Feuerstelle, Holzstapel und Steg wandern in einen Schaukasten-Modus (`?showcase=1`), damit die fertigen Modelle für die Abnahme sichtbar bleiben.
 2. **Fundstellen sichtbar machen.** Jede Fundstelle aus `island-sim/src/world/island.ts` bekommt einen festen Platz auf dem Strand (neue Tabelle neben `placeMap.ts`). Solange die Modelle aus Teil B fehlen, stehen dort die vorhandenen nächstbesten (Treibholz = `IO_Log_Short_A`, Faserpflanze = `IO_Grass_Clump_C` usw.).
 3. **Mengen im Strom.** Der Strom bekommt pro Bild die Vorräte der Fundstellen (`amount`), damit ein leer gepflückter Busch auch leer aussieht und nach einem Sturm mehr Treibholz liegt.
@@ -48,7 +49,7 @@ Reihenfolge nach Nutzen: P1 braucht die leere Insel, damit man versteht, was die
 | 14 | `IO_FireRub_A` | „reibt Holz an Holz“: zwei Hölzer mit Rauchspur, Rille im Holz | ja |
 | 15 | `IO_Leaf_Bundle_A`, `IO_Fiber_Bundle_A` | Getragenes und Abgelegtes: Bündel Blätter, Bündel Fasern | nein |
 
-Bleiben im Schaukasten für später: `IO_Hut_A_Full` und der Hüttenbausatz, `IO_Workbench_A`, Steg, Topf. Sie kommen zurück, wenn die Simulation solche Dinge bauen kann.
+Bleiben im Schaukasten (eigene Ansicht `?showcase=1` zum Anschauen und Abnehmen, nicht auf der normalen Insel): `IO_Hut_A_Full` und der Hüttenbausatz, `IO_Workbench_A`, Steg, Topf. Sie kommen zurück, wenn die Simulation solche Dinge bauen kann. Die Hütte zuerst, siehe §7.
 
 ## 4. So entsteht eine Vorlage in ChatGPT
 
@@ -77,9 +78,14 @@ Die Bilder legt Chris unter `docs/refs/<Modellname>.png` ab oder lädt sie im Th
 4. P2-Modelle.
 5. Live-Insel wieder starten (`ISLAND_RUNNING=1`). Weil sich der Strom ändert, beginnt dann am besten eine neue Insel (Schlüssel `islandone:meta` in Redis löschen), statt Tage nachzuholen.
 
-## 6. Offene Fragen für Chris
+## 6. Entscheidungen von Chris (26.10.2026)
 
-| # | Frage | Vorschlag |
+| # | Frage | Entscheidung |
 |---|---|---|
-| 1 | Bleiben Hütte, Werkbank und Steg sichtbar, nur im Schaukasten? | Ja, `?showcase=1`, damit nichts verloren geht |
-| 2 | Soll die Figur später eine richtige Hütte bauen können? | Erst den wachsenden Unterstand (A.4); eine Hütte braucht neue Regeln in der Simulation und ist eine eigene Etappe |
+| 1 | Bleiben Hütte, Werkbank und Steg sichtbar? | Ja, im Schaukasten (`?showcase=1`), nicht auf der normalen Insel |
+| 2 | Soll die Figur eine richtige Hütte bauen können? | Ja, das ist ein Muss (§7) |
+| 3 | Wer legt fest, was wo auf der Insel steht? | Chris designt die Insel einmal fertig; das kommt in die Inselkarte (A.0). Die Figur muss selbst herausfinden, was was ist |
+
+## 7. Danach: Die Figur baut die Hütte (eigene Etappe)
+
+Heute kennt die Simulation nur lose Teile und wie viel Regen sie abhalten. Für die Hütte lernt sie Bauteile mit Regeln: Pfosten brauchen einen Platz im Boden, ein Rahmen braucht Pfosten, Wände und Dach brauchen einen Rahmen, Verbindungen halten nur mit Faser. Jeder Baustand bringt etwas (Schatten, Regenschutz, Wärme, Schutz im Sturm). Der Name „Hütte“ bleibt außerhalb der Figur: Sie probiert, was hält und was schützt. Das Bild zeigt jeden Baustand mit den Teilen aus `IO_HutKit_A` (19 Teile, steht schon), bis am Ende `IO_Hut_A_Full` dasteht. Der wachsende Unterstand aus A.4 ist die erste Stufe davon.
