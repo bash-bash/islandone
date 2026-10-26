@@ -96,7 +96,7 @@ export function createWater(scene: Scene, o: WaterOptions): Water {
   const normalB = createWaterNormalTexture(scene, 2);
   const lace = createLaceTexture(scene);
   // Until the beach is built: no foam field (everything "far away").
-  let foamField: BaseTexture = RawTexture.CreateRGBATexture(new Uint8Array([255, 255, 0, 255]), 1, 1, scene);
+  let foamField: BaseTexture = RawTexture.CreateRGBATexture(new Uint8Array([255, 255, 128, 255]), 1, 1, scene);
   let foamRegion = new Vector4(0, 0, 1, 1);
 
   const makeMaterial = (name: string, tint: boolean) => {
