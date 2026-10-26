@@ -21,7 +21,7 @@ Stand: 26.10.2026. Anlass: Chris hat die Live-Insel angehalten (`ETAPPE_7_PLAN.m
    - festgebundene Teile: Faserwicklung an den Knoten
    So wächst ein Unterstand Stück für Stück, genau so weit, wie die Figur ihn gebaut hat.
 5. **Feuer nach Zustand.** `glow`: kleine Glut ohne Flammen. `flame`: Flammen und Licht wie heute, aber ohne Steinring, Dreibein und Topf, solange die Figur sie nicht gebaut hat. `ashes`: grauer Fleck mit Rest-Rauch.
-6. **Liegengelassenes.** Abgelegte Stücke liegen am Ort, Getragenes hängt sichtbar an der Figur (Holz unter dem Arm, Blätter in der Hand). Dazu die Animationen Heben und Tragen aus `character/source_anims` für `take` und `drop`.
+6. **Liegengelassenes.** Abgelegte Stücke liegen am Ort, Getragenes hängt sichtbar an der Figur (Holz unter dem Arm, Blätter in der Hand). Dazu die Animationen Heben und Tragen für `take` und `drop` (die Quelldateien `source_anims` liegen noch nicht im Repository).
 7. **Prüfen:** Ein Test spielt die Sonnet-Aufzeichnung aus Etappe 6 (`public/feeds/seed-3.json`, neu erzeugt) ab und vergleicht Bildschirmfotos an festen Stellen: Start leer, erster Haufen, erstes Feuer.
 
 ## 3. Teil B: Die neuen Modelle
