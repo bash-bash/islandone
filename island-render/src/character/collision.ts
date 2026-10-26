@@ -31,9 +31,9 @@ export interface CollisionWorld {
 }
 
 export const CHARACTER_RADIUS = 0.28;
-const MAX_STEP_UP = 0.6; // m: up onto the pier, not onto a rock
-const MAX_STEP_DOWN = 0.6; // m: keeps the character on the pier
-const DEEPEST_WADE = -0.45; // m below the water line
+export const MAX_STEP_UP = 0.6; // m: up onto the pier, not onto a rock
+export const MAX_STEP_DOWN = 0.6; // m: keeps the character on the pier
+export const DEEPEST_WADE = -0.45; // m below the water line
 
 /** Ground height the character stands on: terrain, or a deck above it. */
 export function groundAt(world: CollisionWorld, x: number, z: number): number {
