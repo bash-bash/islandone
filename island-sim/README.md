@@ -24,6 +24,7 @@ npm run story -- --seed 1 --days 3 --thinker replay  # dieselbe Aufzeichnung ohn
 npm run sim -- --thinker llm --model claude-haiku-5-5 --seeds 10 --days 30 --out out/haiku-30   # viele Seeds mit Claude
 npm run sim -- --thinker replay --model claude-haiku-5-5 --seeds 10 --days 5 --out out/haiku-5  # dieselben Läufe kostenlos, kürzer
 npm run report -- out/rules-30 out/haiku-30 out/sonnet-5 --creator ask --out report.md          # Vergleich und Creator Backlog
+npm run feed -- --seed 3 --hours 30 --out ../island-render/public/feeds/seed-3.json   # Ereignisstrom für island-render (Etappe 7)
 npm test                          # Tests (Vitest)
 npm run typecheck
 ```
@@ -56,6 +57,8 @@ Claude bekommt die Sicht der Figur als JSON und antwortet strukturiert (Gedanke,
 | `src/creator/` | Sicht der Weltautorin, nie der Figur: Katalog dessen, was die Welt (auch latent) bietet (`catalog.ts`), und das Creator Backlog (`backlog.ts`, Handoff §9), das jede genannte Lücke gegen den Katalog prüft. Läuft nach der Simulation auf ihren Ergebnissen |
 | `src/sim.ts` | Tick-Schleife: Welt → Aktion abschließen → Wahrnehmung → Entscheidung. `createMind` tauscht die Figur aus (Tests, später LLM) |
 | `src/batch.ts`, `src/cli.ts` | Viele Seeds rechnen (mit Claude mehrere gleichzeitig, `--concurrency`), Ergebnisse und geschätzte Kosten schreiben; Aufzeichnungen je Modell in `recordings/<model>/seed-<n>.jsonl` |
+| `src/live/` | Ereignisstrom für island-render (Etappe 7, [`docs/ETAPPE_7_PLAN.md`](../docs/ETAPPE_7_PLAN.md)): `feed.ts` hört über `onEvent`/`onTick` beim Lauf zu und schreibt Bilder (Ort, Tun, Bedürfnisse, Getragenes, Wetter, Feuer) und Momente (Gedanken mit Ziel und Schritten, Entdeckungen, Lehren, Lücken, Feuer, Tod) in Klartext für Zuschauer; `live.ts` rechnet einen Abschnitt der Inselzeit (`untilTick`), aus der Aufzeichnung ohne Claude; `feedTypes.ts` sind die Typen, die island-render importiert; `island.ts` lässt die Insel rund um die Uhr laufen (`advanceIsland`: bis jetzt nachrechnen, neue Gedanken aufzeichnen, Kostenbremse, neue Insel nach Tod oder Code-Änderung), `redisStore.ts` speichert sie in Upstash Redis |
+| `api/`, `scripts/build-vercel.mjs` | Die Vercel-Funktionen `/api/tick` (Cron jede Minute) und `/api/island` (Strom für Zuschauer) und der Build für Vercel |
 | `src/report.ts` | Mehrere Läufe nebeneinander: §36-Kennzahlen, Streuung über die Seeds, Creator Backlog |
 
 ## Regeln, die Tests absichern
@@ -70,4 +73,6 @@ Claude bekommt die Sicht der Figur als JSON und antwortet strukturiert (Gedanke,
 - **Körper (Etappe 2):** Wer nicht trinkt, verdurstet in 2,5–6 Tagen; die Routine-Figur trinkt spätestens am zweiten Tag frisches Wasser und überlebt fast immer 30 Tage; Meerwasser und Beeren werden pro Stelle höchstens zweimal probiert (`test/world.test.ts`).
 - **Determinismus (§36):** kein `Math.random`, `Date` oder `performance.now` in der Simulation; gleicher Seed ergibt gleiches Ereignisprotokoll; 100 × 30 Tage zweimal gerechnet ergeben denselben Batch-Fingerabdruck (`test/determinism.test.ts`).
 - **Zufallsströme sind unabhängig:** Zusätzliche Würfe im Wetter verschieben nicht die Würfe der Figur (`test/rng.test.ts`).
+- **Ereignisstrom (Etappe 7):** Zuhören ändert den Fingerabdruck nicht; bis zu einem Tick gerechnet ergibt den Anfang des längeren Laufs; ein Abschnitt beginnt mit einem vollen Bild und gleicht demselben Stück des ganzen Laufs; Schritte und Tun stehen in Klartext ohne Kennungen (`test/live.test.ts`).
+- **Live-Insel (Etappe 7):** Claude wird nur für Momente gefragt, die noch nicht aufgezeichnet sind, und die Insel kommt in Schritten genauso heraus wie in einem Zug; nie zwei Läufe gleichzeitig; nach dem Monatsbudget übernimmt der neugierige Denker; nach höchstens N neuen Gedanken pausiert ein Aufruf und behält sie; neue Insel nach Code-Änderung oder am Morgen nach dem Tod (`test/island.test.ts`).
 - **Golden-Fingerabdrücke:** Seeds 1–3 haben feste Fingerabdrücke als Snapshot. Ändert sich das Verhalten der Simulation absichtlich, mit `npx vitest run -u` aktualisieren und im Commit sagen, warum.

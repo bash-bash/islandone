@@ -1,4 +1,4 @@
-import { EventLog } from "./core/eventLog";
+import { EventLog, type SimEvent } from "./core/eventLog";
 import { RngStreams, type Rng } from "./core/rng";
 import { TICKS_PER_DAY, timeOf } from "./core/time";
 import { RoutineMind, type ThinkingPace } from "./mind/routineMind";
@@ -24,6 +24,12 @@ export interface SimOptions {
   thinker?: Thinker;
   /** How often the character stops to think with a thinker (default: EAGER_PACE). */
   pace?: ThinkingPace;
+  /** Stop before this tick (the live island computes only up to "now"). Default: days × 1440. */
+  untilTick?: number;
+  /** Sees every event as it is logged (the live feed). Does not change the run. */
+  onEvent?: (event: SimEvent, world: Readonly<WorldState>) => void;
+  /** Called at the end of every simulated tick (the live feed). Must not change the world. */
+  onTick?: (tick: number, world: Readonly<WorldState>) => void;
 }
 
 export interface TickContext {
@@ -84,13 +90,14 @@ export function* simulate(options: SimOptions): Generator<ThinkRequest, SimResul
   if (!Number.isInteger(days) || days < 1) throw new Error(`days must be a positive integer, got ${days}`);
 
   const rng = new RngStreams(seed);
-  const log = new EventLog(options.keepEvents ?? false);
   const world = createWorld(rng.get("world-setup"));
+  const onEvent = options.onEvent;
+  const log = new EventLog(options.keepEvents ?? false, onEvent && ((event) => onEvent(event, world)));
   const thinker = options.thinker;
   const mind: Mind = (options.createMind ?? ((r) => new RoutineMind(r, thinker ? "external" : "rules", options.pace)))(rng.get("mind"));
   const perception = new Perception();
   const purposeTicks: Record<string, number> = {};
-  const total = days * TICKS_PER_DAY;
+  const total = Math.min(days * TICKS_PER_DAY, options.untilTick ?? Infinity);
   let minHealth = world.body.health;
   let soakedTicks = 0;
   let arrived = true;
@@ -148,6 +155,7 @@ export function* simulate(options: SimOptions): Generator<ThinkRequest, SimResul
     }
     const purpose: Purpose = world.character.current!.action.purpose;
     purposeTicks[purpose] = (purposeTicks[purpose] ?? 0) + 1;
+    options.onTick?.(tick, world);
   }
 
   log.push({ tick, source: "sim", type: "sim.end", data: { alive: !world.death, purposeTicks } });

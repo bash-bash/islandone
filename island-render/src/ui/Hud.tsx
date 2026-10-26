@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import { cameraRigRef } from "../engine/camera";
 import { switchQuality, type QualityLevel } from "../engine/quality";
 import { statsStore, type RenderStats } from "../engine/stats";
+import { feedUrl } from "../sim/feedPlayer";
 import { figureStore, startFigureStub, type Need, type Slot } from "./figureState";
 import {
   AxeIcon,
@@ -61,7 +62,8 @@ export function Hud() {
   const [settings, setSettings] = useState(() => new URLSearchParams(location.search).has("debug"));
   const loading = !s.ready && !s.error;
 
-  useEffect(() => startFigureStub(), []);
+  // With a feed from island-sim (?feed=…) the feed player fills the store instead.
+  useEffect(() => (feedUrl() ? undefined : startFigureStub()), []);
 
   const focusEvent = () => {
     const at = figureStore.get().discovery?.at;
@@ -121,8 +123,8 @@ export function Hud() {
 
       <div className="hud-panel hud-goals">
         <div className="hud-goals-title">{f.goalsTitle}</div>
-        {f.goals.map((g) => (
-          <div key={g.label} className={`hud-goal${g.done >= g.of ? " done" : ""}`}>
+        {f.goals.map((g, i) => (
+          <div key={i} className={`hud-goal${g.done >= g.of ? " done" : ""}`}>
             <CheckBox checked={g.done >= g.of} />
             <span>{g.label}</span>
             <b>

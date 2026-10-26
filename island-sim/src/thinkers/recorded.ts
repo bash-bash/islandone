@@ -54,6 +54,60 @@ export class RecordedThinker implements Thinker {
   }
 }
 
+/** One recorded answer, as stored in a recording file or the live island's store. */
+export interface RecordedLine {
+  key: string;
+  by: string;
+  view: { reason: string; time: MindView["time"] };
+  thought: Thought;
+}
+
+/**
+ * The same as RecordedThinker, with the recording kept by the caller instead of
+ * a file (the live island keeps it in Redis). Moments not on record go to the
+ * inner thinker; each new answer is handed to `onRecord`. After `maxNew` new
+ * answers it throws RecordingPaused, so one call never runs too long.
+ */
+export class StoredThinker implements Thinker {
+  readonly name: string;
+  private readonly answers = new Map<string, Thought>();
+  readonly stats = { replayed: 0, recorded: 0 };
+
+  constructor(
+    lines: readonly RecordedLine[],
+    readonly inner: Thinker,
+    private readonly onRecord: (line: RecordedLine) => void,
+    private readonly maxNew = Infinity,
+  ) {
+    this.name = inner.name;
+    for (const line of lines) this.answers.set(line.key, line.thought);
+  }
+
+  think(view: MindView): Thought | Promise<Thought> {
+    const key = keyOf(view);
+    const known = this.answers.get(key);
+    if (known) {
+      this.stats.replayed++;
+      return known;
+    }
+    if (this.stats.recorded >= this.maxNew) throw new RecordingPaused(this.stats.recorded);
+    const store = (thought: Thought) => {
+      this.answers.set(key, thought);
+      this.stats.recorded++;
+      this.onRecord({ key, by: this.inner.name, view: { reason: view.reason, time: view.time }, thought });
+      return thought;
+    };
+    const answer = this.inner.think(view);
+    return answer instanceof Promise ? answer.then(store) : store(answer);
+  }
+}
+
+export class RecordingPaused extends Error {
+  constructor(count: number) {
+    super(`paused after ${count} new thoughts`);
+  }
+}
+
 function keyOf(view: MindView): string {
   const hash = new StreamHash();
   hash.update(canonicalJson(view));
