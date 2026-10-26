@@ -1,5 +1,5 @@
 // Builds the whole site for Vercel with the Build Output API (docs/ETAPPE_7_PLAN.md §3):
-// island-render as static files, island-sim's api/*.ts bundled into functions, and the cron.
+// island-render as static files and island-sim's api/*.ts bundled into functions.
 // Run from the repository root: node island-sim/scripts/build-vercel.mjs
 import { execSync } from "node:child_process";
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -35,8 +35,6 @@ for (const [name, config] of Object.entries(functions)) {
   );
 }
 
-writeFileSync(
-  join(out, "config.json"),
-  JSON.stringify({ version: 3, crons: [{ path: "/api/tick", schedule: "* * * * *" }] }, null, 2),
-);
+// The cron (every minute, /api/tick) is declared in vercel.json; Vercel adds it to this config itself.
+writeFileSync(join(out, "config.json"), JSON.stringify({ version: 3 }, null, 2));
 console.log("Vercel build output in .vercel/output");
