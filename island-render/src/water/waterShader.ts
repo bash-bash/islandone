@@ -6,7 +6,10 @@
 // The water thickness per pixel comes from the scene depth (camera-space z) behind the surface,
 // so underwater rocks near the surface stay visible and the shoreline fades out softly.
 // Foam: a lace texture dissolved by a foam amount from a baked distance field
-// (R = distance to shore, G = distance to rocks/posts).
+// (R = distance to shore, G = distance to rocks/posts, B = which way the rock edge faces).
+// Rocks only foam when a swell crest reaches them: the swell rolls in from the sea (+X),
+// hits the seaward side first, the foam spreads out and fades; between crests and in the
+// lee there is none. Crests vary in strength, some barely foam at all.
 
 export const WATER_UNIFORMS = [
   "world",
@@ -111,15 +114,23 @@ void main(void) {
   float lace1 = texture2D(laceTex, xz * 0.75 + vec2(0.010, 0.006) * time).r;
   float lace2 = texture2D(laceTex, xz * 1.45 + vec2(-0.007, 0.011) * time + 0.37).r;
   float lace = max(lace1, lace2 * 0.9);
-  float pulse = 0.7 + 0.3 * sin(time * 1.5 + xz.x * 1.1 + xz.y * 0.7);
-  float fObj = exp(-dObj / 0.32) * pulse + exp(-dObj / 0.8) * 0.45;
+  float faceX = field.b * 2.0 - 1.0;
+  float ph = time / 7.0 + (xz.x - faceX * dObj) / 7.5;
+  float age = fract(ph) * 7.0;
+  float strength = smoothstep(0.1, 0.7, 0.5 + 0.5 * sin(floor(ph) * 2.39 + xz.y * 0.23));
+  float spread = 0.15 + 1.3 * (1.0 - exp(-age / 1.3));
+  float burst = (1.0 - smoothstep(spread - 0.35, spread, dObj)) * exp(-age / 2.0) * smoothstep(0.0, 0.3, age);
+  float splash = exp(-dObj / 0.18) * exp(-age / 0.8) * 1.2 * smoothstep(0.0, 0.15, age);
+  float fObj = (burst * 0.9 + splash) * strength * smoothstep(-0.6, 0.7, faceX);
   float cyc = fract(time * 0.085 + sin(xz.y * 0.09) * 0.25);
   float front = (1.0 - cyc) * 2.4;
   float bandD = dShore - front;
   float band = exp(-bandD * bandD / 0.012) * smoothstep(0.0, 0.2, cyc) * (0.35 + 0.65 * cyc);
   float trail = exp(-max(-bandD, 0.0) / 0.5) * step(bandD, 0.0) * 0.3 * cyc;
   float fShore = exp(-dShore / 0.22) * 0.9 + band * 0.8 + trail;
-  float f = clamp(max(fObj, fShore) + exp(-L / 0.05) * 0.5, 0.0, 1.0);
+  // Thin water at a rock's foot only foams while a crest washes over it.
+  float contact = exp(-L / 0.05) * 0.5 * mix(clamp(fObj * 2.0, 0.0, 1.0), 1.0, smoothstep(0.15, 0.6, dObj));
+  float f = clamp(max(fObj, fShore) + contact, 0.0, 1.0);
   float foam = smoothstep(1.0 - f, 1.0 - f + 0.2, lace) * smoothstep(0.0, 0.08, f);
 
   float fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
@@ -227,15 +238,22 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
   let lace1 = textureSample(laceTex, laceTexSampler, xz * 0.75 + vec2f(0.010, 0.006) * t).r;
   let lace2 = textureSample(laceTex, laceTexSampler, xz * 1.45 + vec2f(-0.007, 0.011) * t + 0.37).r;
   let lace = max(lace1, lace2 * 0.9);
-  let pulse = 0.7 + 0.3 * sin(t * 1.5 + xz.x * 1.1 + xz.y * 0.7);
-  let fObj = exp(-dObj / 0.32) * pulse + exp(-dObj / 0.8) * 0.45;
+  let faceX = field.b * 2.0 - 1.0;
+  let ph = t / 7.0 + (xz.x - faceX * dObj) / 7.5;
+  let age = fract(ph) * 7.0;
+  let strength = smoothstep(0.1, 0.7, 0.5 + 0.5 * sin(floor(ph) * 2.39 + xz.y * 0.23));
+  let spread = 0.15 + 1.3 * (1.0 - exp(-age / 1.3));
+  let burst = (1.0 - smoothstep(spread - 0.35, spread, dObj)) * exp(-age / 2.0) * smoothstep(0.0, 0.3, age);
+  let splash = exp(-dObj / 0.18) * exp(-age / 0.8) * 1.2 * smoothstep(0.0, 0.15, age);
+  let fObj = (burst * 0.9 + splash) * strength * smoothstep(-0.6, 0.7, faceX);
   let cyc = fract(t * 0.085 + sin(xz.y * 0.09) * 0.25);
   let front = (1.0 - cyc) * 2.4;
   let bandD = dShore - front;
   let band = exp(-bandD * bandD / 0.012) * smoothstep(0.0, 0.2, cyc) * (0.35 + 0.65 * cyc);
   let trail = exp(-max(-bandD, 0.0) / 0.5) * step(bandD, 0.0) * 0.3 * cyc;
   let fShore = exp(-dShore / 0.22) * 0.9 + band * 0.8 + trail;
-  let f = clamp(max(fObj, fShore) + exp(-L / 0.05) * 0.5, 0.0, 1.0);
+  let contact = exp(-L / 0.05) * 0.5 * mix(clamp(fObj * 2.0, 0.0, 1.0), 1.0, smoothstep(0.15, 0.6, dObj));
+  let f = clamp(max(fObj, fShore) + contact, 0.0, 1.0);
   let foam = smoothstep(1.0 - f, 1.0 - f + 0.2, lace) * smoothstep(0.0, 0.08, f);
 
   let fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);

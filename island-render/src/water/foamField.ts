@@ -12,15 +12,20 @@ const BINS = 32;
 /**
  * Distance field for the water shader's foam, baked once on the CPU (handoff §19):
  * R = distance to the shoreline, G = distance to objects that break the surface
- * (rocks, stones, dock posts). Objects get their outline at the waterline from
- * the vertices near y = 0, as a polar profile around their centre.
- * Stored as an RGBA8 texture with 1 cm steps up to 2.55 m.
+ * (rocks, stones, dock posts), B = which way the nearest object's edge faces along X
+ * (0 = towards the land at -X, 1 = towards the sea at +X, where the swell comes from).
+ * Objects get their outline at the waterline from the vertices near y = 0, as a
+ * polar profile around their centre. Distances are stored in an RGBA8 texture with
+ * 1 cm steps up to 2.55 m.
  */
 export function buildFoamField(scene: Scene, candidates: AbstractMesh[]): { texture: RawTexture; region: Vector4 } {
   const w = Math.round(SIZE_X / RES);
   const h = Math.round(SIZE_Z / RES);
   const shore = new Float32Array(w * h);
   const objects = new Float32Array(w * h).fill(1e9);
+  // Outward direction (X component) from the nearest object, judged by the distance to its outline.
+  const facing = new Float32Array(w * h);
+  const edgeDist = new Float32Array(w * h).fill(1e9);
 
   for (let j = 0; j < h; j++) {
     for (let i = 0; i < w; i++) {
@@ -32,7 +37,7 @@ export function buildFoamField(scene: Scene, candidates: AbstractMesh[]): { text
 
   for (const outline of waterlineOutlines(candidates)) {
     const { cx, cz, radius } = outline;
-    const rMax = Math.max(...radius);
+    const rMax = Math.max(...radius) + 2.6;
     const i0 = Math.max(0, Math.floor((cx - rMax - X0) / RES));
     const i1 = Math.min(w - 1, Math.ceil((cx + rMax - X0) / RES));
     const j0 = Math.max(0, Math.floor((cz - rMax - Z0) / RES));
@@ -45,7 +50,13 @@ export function buildFoamField(scene: Scene, candidates: AbstractMesh[]): { text
         const b = Math.floor(a) % BINS;
         const t = a - Math.floor(a);
         const r = radius[b] * (1 - t) + radius[(b + 1) % BINS] * t;
-        if (Math.hypot(dx, dz) <= r) objects[j * w + i] = 0;
+        const d = Math.hypot(dx, dz);
+        const k = j * w + i;
+        if (d <= r) objects[k] = 0;
+        if (d - r < edgeDist[k]) {
+          edgeDist[k] = d - r;
+          facing[k] = d > 1e-6 ? dx / d : 0;
+        }
       }
     }
   }
@@ -60,7 +71,7 @@ export function buildFoamField(scene: Scene, candidates: AbstractMesh[]): { text
     const border = i === 0 || j === 0 || i === w - 1 || j === h - 1;
     data[k * 4] = border ? 255 : Math.min(255, Math.round(shore[k] * RES * 100));
     data[k * 4 + 1] = border ? 255 : Math.min(255, Math.round(objects[k] * RES * 100));
-    data[k * 4 + 2] = 0;
+    data[k * 4 + 2] = Math.round((facing[k] * 0.5 + 0.5) * 255);
     data[k * 4 + 3] = 255;
   }
   const texture = RawTexture.CreateRGBATexture(data, w, h, scene, false, false, Constants.TEXTURE_BILINEAR_SAMPLINGMODE);
