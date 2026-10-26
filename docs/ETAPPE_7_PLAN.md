@@ -70,3 +70,7 @@ Zuschauer ──> /api/island  (liefert den abgelegten Strom, 30 s im CDN zwisch
 3. Unter Storage (Marketplace) eine Upstash-Redis-Datenbank anlegen und mit dem Projekt verbinden. Das setzt `KV_REST_API_URL` und `KV_REST_API_TOKEN`.
 4. Umgebungsvariablen setzen: `ISLAND_SIM_API_KEY` (Claude-API-Schlüssel) und `CRON_SECRET` (eine lange Zufallszeichenkette). Optional `ISLAND_MONTHLY_BUDGET_USD` (Standard 43 $, etwa 40 €).
 5. Deployen. Unter Settings → Cron Jobs sollte `/api/tick` mit `* * * * *` stehen. Nach der ersten Minute zeigt die Seite die Live-Insel; vorher läuft der Platzhalter.
+
+## 7. Pausieren und wieder starten
+
+Entscheidung Chris, 26.10.2026: Die Live-Insel ruht, bis die Assets weiter sind. `/api/tick` arbeitet nur, wenn im Vercel-Projekt `ISLAND_RUNNING=1` gesetzt ist; sonst antwortet es sofort mit `paused` und fragt Claude nie. Der Cron läuft weiter, kostet so aber nur einen Funktionsaufruf pro Minute. Zum Wiederstarten `ISLAND_RUNNING=1` setzen und neu deployen. Achtung: Die Inselzeit läuft während der Pause weiter. Wer nach langer Pause wieder startet, holt die verpassten Stunden nach (höchstens 12 Gedanken pro Minute, die Kostenbremse gilt). Will man das nicht, legt man vorher in Redis einen neuen Start an, indem man den Schlüssel `islandone:meta` löscht.
