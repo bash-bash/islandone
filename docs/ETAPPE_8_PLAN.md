@@ -81,6 +81,8 @@ Bleiben im Schaukasten (eigene Ansicht `?showcase=1` zum Anschauen und Abnehmen,
 
 Pro Modell reicht ein Bild als Ansichtsblatt. Es dient nur als Vorlage für Form, Farbe und Proportion, gebaut wird in Blender.
 
+Fertige Copy-and-Paste-Prompts pro Modell (ChatGPT-Vorlage mit Dateinamen und Blender-Auftrag) stehen im Projektordner unter `plans/PROMPTS_ETAPPE_8.md`. Die Tabellen unten sind die Kurzfassung.
+
 **Regeln für jedes Bild**
 
 - Ein Bild reicht, zwei sind besser: schräg von oben (etwa 40°, wie die Spielkamera) und von der Seite. Bei Varianten (A–C) alle nebeneinander auf einem Bild.
