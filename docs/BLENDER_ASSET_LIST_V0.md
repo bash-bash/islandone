@@ -35,6 +35,7 @@ Target art direction:
 | IO_Workbench_A | erstellt (v1): ein GLB mit LOD0–3 (3228 / 1260 / 492 / 136 Dreiecke), Box-Collider, 3 Sockets, 4 optionale Requisiten (Steinbrocken, Steinhammer, Steinklinge, Splitter), Pivot unten Mitte, 1,50 × 0,91 × 0,88 m (Platte 1,50 × 0,80 m), Materialien des Bausatzes `IO_MAT_Wood_Medium` / `IO_MAT_Fiber_Dry` / `IO_MAT_Rock_Gray` (keine neuen Texturen) | `assets/workbench/`, `blender/islandone_workbench.py` |
 | IO_Seagull_A | erstellt (v1): stilisierte stehende Möwe, ein GLB mit LOD0–3 (3172 / 1364 / 472 / 212 Dreiecke), konvexer Collider (56), 16 Rig-Hilfspunkte `RIG_*` (Armatur und Vertex-Gruppen in der .blend), Pivot unten Mitte zwischen den Füßen, Blick glTF +Z, 0,44 × 0,18 × 0,37 m, `IO_MAT_Bird_Feathers_Light` 512 + `IO_MAT_Bird_Beak_Legs` 256 | `assets/seagull/`, `blender/islandone_seagull.py` |
 | IO_Starfish_A | erstellt (v1): fünfarmiger Seestern, ein GLB mit LOD0–3 (840 / 300 / 96 / 40 Dreiecke), konvexer flacher Collider (18), Pivot unten Mitte, 0,24 × 0,24 × 0,049 m, `IO_MAT_Starfish_A` 512 (ein Texturset für alle LODs), zweites UV-Set als Maske für Laufzeit-Zustände, Strand- und Unterwasser-Kontext-Render | `assets/starfish/`, `blender/islandone_starfish.py` |
+| IO_Driftwood_A, _B, _C | erstellt (v1): ausgebleichtes, verdrehtes Treibholz; A 2,15 m mit Wurzelkrone (Achse 1,97 m, taugt als Pfosten), B 1,24 m gebogen mit Gabel, C 0,50 m dickes Spaltstück; je ein GLB mit LOD0–2 (572/234/98, 466/194/72, 448/120/70 Dreiecke), konvexer Collider (28), Sockets END_A/END_B/GRIP/TOP_MID, Pivot Mitte auf Bodenhöhe, Achse +X, 1 Material `IO_MAT_Wood_Driftwood` mit einem Atlas 512 für alle drei, Nässe zur Laufzeit, 360°-QA, Vergleich mit Vorlage, Kontext-Render am Spülsaum | Projektordner `driftwood/`, `islandone_driftwood.py` |
 | alle anderen | offen | |
 
 ---
@@ -448,6 +449,8 @@ Requirements:
 - optional simple shader sway
 
 ## IO_Driftwood_A
+Status: **erstellt** (2026-10-27), A, B und C. Details: `driftwood/README.md` im Projektordner.
+
 Target triangles: 150–600
 
 Create:
