@@ -113,7 +113,7 @@ Stylized real-time 3D game asset, premium browser game look, matching the attach
 
 | Modell | Ansichten | Prompt (nach dem Stil-Baustein) |
 |---|---|---|
-| 12 HutKit A, Baustände | 4 Stufen nebeneinander, gleiche Kamera schräg von oben | Four build stages of the same small tropical hut, 3 x 3 m, built by one person from wood and palm fronds, straight and square like real carpentry: stage 1 four upright corner posts dug into sand; stage 2 posts joined by horizontal beams at the top, lashed with plant fibre; stage 3 gable roof frame with rafters, half covered with overlapping rows of dried palm fronds from the eaves up; stage 4 finished roof and woven back and side walls, open front entrance. A grey 1.75 m human silhouette for scale. |
+| 12 HutKit A, Baustände | 4 Stufen nebeneinander, gleiche Kamera schräg von oben | Four build stages of the same small tropical hut, 4.5 x 3 m, built by one person from wood and palm fronds, straight and square like real carpentry: stage 1 four upright corner posts dug into sand; stage 2 posts joined by horizontal beams at the top, lashed with plant fibre; stage 3 gable roof frame with rafters, half covered with overlapping rows of dried palm fronds from the eaves up; stage 4 finished roof and woven back and side walls, open front entrance. A grey 1.75 m human silhouette for scale. |
 | 13 Fire Stages A | 3 Zustände nebeneinander | Three states of a small primitive campfire on sand, no stone ring: a glowing ember nest with dry grass tinder and thin smoke; a small fire of crossed thin branches with flames; a grey ash patch with a few charred stick ends. |
 | 14 FireRub A | schräg von oben | A primitive fire-by-friction set lying on the ground: a flat wooden board with a blackened groove and a little dark wood dust, and a straight wooden stick, a faint wisp of smoke. |
 
@@ -180,7 +180,7 @@ Alle Bauten stehen in einem Raster von **1,5 m**, rechtwinklig zur Achse ihres B
 
 #### Hütte
 
-Die Hütte ist ein Rechteck aus Rasterfeldern. Erst 2 × 2 Felder (3 × 3 m), später um ganze Felder länger oder breiter.
+Die Hütte ist ein Rechteck aus Rasterfeldern. Die erste Hütte hat 3 × 2 Felder (4,5 × 3 m, Wandhöhe 2,4 m) wie `IO_Hut_A_Full`, dessen Bausatz schon im 1,5-m-Raster gebaut ist. Später wird sie um ganze Felder länger oder breiter.
 
 Sie wird in einer festen Reihenfolge gebaut. Jeder Schritt braucht den vorherigen:
 
@@ -231,10 +231,10 @@ Jeder Platz im Raster ist ein Sockel im Hüttenbausatz `IO_HutKit_A` (Pfosten, B
 4. Den Hüttenbausatz `IO_HutKit_A` aus dem Projektordner (`hut/glb/kit/`) ins Repository holen; heute liegt dort nur `IO_Hut_A_Full`.
 5. Erst Unterstand und Hütte, dann Steg, dann Werkbank.
 
-### 7.7 Offene Fragen an Chris
+### 7.7 Entschieden (Chris, 27.10.2026)
 
-| # | Frage | Vorschlag |
+| # | Frage | Entscheidung |
 |---|---|---|
-| 1 | Passt ein Raster von 1,5 m und eine erste Hütte von 3 × 3 m? | Ja, so groß ist `IO_Hut_A_Full` ungefähr |
+| 1 | Raster und Größe der ersten Hütte | Raster 1,5 m; erste Hütte 3 × 2 Felder (4,5 × 3 m) wie `IO_Hut_A_Full` |
 | 2 | Eingang zum Meer, Rückseite zum Wald? | Ja |
-| 3 | Darf es später ein zweites Gebäude geben (Lager, Räucherhütte)? | Erst nach der ersten Hütte, dann mit einem eigenen Bauplatz im Camp |
+| 3 | Darf es später ein zweites Gebäude geben (Lager, Räucherhütte)? | Ja, nach der ersten Hütte, mit einem eigenen Bauplatz im Camp |
