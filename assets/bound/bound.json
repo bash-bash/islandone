@@ -1,0 +1,611 @@
+{
+  "family": "IO_Bound_A",
+  "kit": "bound_v1",
+  "generator": "islandone_bound.py",
+  "blender": "5.2.2 LTS",
+  "variants": {
+    "StickStone": {
+      "asset_id": "IO_Bound_A_StickStone",
+      "family": "IO_Bound_A",
+      "kit": "bound_v1",
+      "category": "crafted",
+      "sim_kind": "bound",
+      "parts": {
+        "haft": "IO_Branch_A",
+        "head": "IO_Stone_Small_D",
+        "haft_tilt_deg": 1.6,
+        "member_A_radius_m": 0.013,
+        "wrap_fit": "convex hull of haft and stone sections per turn",
+        "diagonal_tilt_deg": 20.0
+      },
+      "variant": "StickStone",
+      "usage": "a bound item: two found pieces tied together by hand with fibre; the simulation stores the parts and the joint strength",
+      "pivot": "GRIP point projected onto the ground (Z = 0); stick axis along +X, head / joint towards +X",
+      "rest_tilt_deg": 0.51,
+      "rope_below_ground_m": -0.004,
+      "lods": [
+        {
+          "node": "IO_Bound_A_StickStone_LOD0",
+          "tris": 1202,
+          "verts": 898,
+          "budget": [
+            600,
+            1500
+          ],
+          "in_budget": true,
+          "materials": [
+            "IO_MAT_Wood_Bark",
+            "IO_MAT_Rock_Gray_D0",
+            "IO_MAT_Fiber_Dry"
+          ],
+          "wrap_verts": 325,
+          "lod_max_distance_m": 10
+        },
+        {
+          "node": "IO_Bound_A_StickStone_LOD1",
+          "tris": 398,
+          "verts": 367,
+          "budget": [
+            250,
+            600
+          ],
+          "in_budget": true,
+          "materials": [
+            "IO_MAT_Wood_Bark",
+            "IO_MAT_Rock_Gray_D1",
+            "IO_MAT_Fiber_Dry"
+          ],
+          "wrap_verts": 96,
+          "lod_max_distance_m": 25
+        },
+        {
+          "node": "IO_Bound_A_StickStone_LOD2",
+          "tris": 152,
+          "verts": 149,
+          "budget": [
+            80,
+            200
+          ],
+          "in_budget": true,
+          "materials": [
+            "IO_MAT_Wood_Bark",
+            "IO_MAT_Rock_Gray_D2",
+            "IO_MAT_Fiber_Dry"
+          ],
+          "wrap_verts": 36,
+          "lod_max_distance_m": 50
+        }
+      ],
+      "lod_nodes": [
+        "IO_Bound_A_StickStone_LOD0",
+        "IO_Bound_A_StickStone_LOD1",
+        "IO_Bound_A_StickStone_LOD2"
+      ],
+      "lod_max_distance_m": [
+        10,
+        25,
+        50
+      ],
+      "cull_distance_m": 70,
+      "dimensions_m": [
+        0.8856,
+        0.2336,
+        0.1009
+      ],
+      "bbox_min_m": [
+        -0.1835,
+        -0.1399,
+        -0.004
+      ],
+      "bbox_max_m": [
+        0.7021,
+        0.0937,
+        0.0969
+      ],
+      "material_ids": [
+        "IO_MAT_Wood_Bark",
+        "IO_MAT_Fiber_Dry",
+        "IO_MAT_Rock_Gray"
+      ],
+      "collision_node": "IO_Bound_A_StickStone_COL",
+      "collision_type": "capsule along each stick (square prism with pointed ends) + the stone's own convex collider",
+      "collision_primitive": [
+        {
+          "p0": [
+            -0.1199,
+            -0.0074,
+            0.0235
+          ],
+          "p1": [
+            0.7021,
+            -0.0074,
+            0.0451
+          ],
+          "radius": 0.024,
+          "p0_gltf": [
+            -0.1199,
+            0.0235,
+            0.0074
+          ],
+          "p1_gltf": [
+            0.7021,
+            0.0451,
+            0.0074
+          ]
+        }
+      ],
+      "collision_tris": 32,
+      "collision_zmin": -0.0005,
+      "sockets": {
+        "GRIP": {
+          "pos_blender": [
+            -0.0,
+            -0.0,
+            0.0259
+          ],
+          "pos_gltf": [
+            -0.0,
+            0.0259,
+            0.0
+          ],
+          "rot_gltf_xyzw": [
+            -0.0,
+            -0.0,
+            0.0131,
+            0.9999
+          ],
+          "x_axis": [
+            0.9997,
+            -0.0,
+            0.0263
+          ],
+          "z_axis": [
+            -0.0263,
+            0.0,
+            0.9997
+          ],
+          "purpose": "hand: attach to the hand bone (held state); +X along the stick towards the head"
+        },
+        "HEAD": {
+          "pos_blender": [
+            0.5853,
+            -0.0561,
+            0.0394
+          ],
+          "pos_gltf": [
+            0.5853,
+            0.0394,
+            0.0561
+          ],
+          "rot_gltf_xyzw": [
+            0.7088,
+            0.0093,
+            0.0093,
+            0.7053
+          ],
+          "x_axis": [
+            0.9997,
+            -0.0,
+            0.0263
+          ],
+          "z_axis": [
+            0.0001,
+            -1.0,
+            -0.005
+          ],
+          "purpose": "centre of the stone head at binding height; +Z = direction of the cutting edge (striking direction), +X along the haft"
+        },
+        "JOINT": {
+          "pos_blender": [
+            0.5861,
+            -0.0132,
+            0.0396
+          ],
+          "pos_gltf": [
+            0.5861,
+            0.0396,
+            0.0132
+          ],
+          "rot_gltf_xyzw": [
+            0.7088,
+            0.0093,
+            0.0093,
+            0.7053
+          ],
+          "x_axis": [
+            0.9997,
+            -0.0,
+            0.0263
+          ],
+          "z_axis": [
+            0.0001,
+            -1.0,
+            -0.005
+          ],
+          "purpose": "contact point of the two parts inside the binding; +X along member A (stick), +Z towards member B"
+        }
+      },
+      "morph_targets": {
+        "Loose": "weak joint: wrap turns 18 % wider and sagging 6 mm; weight = 1 - joint_strength (or any curve the renderer likes); bark and stone do not move"
+      },
+      "states": {
+        "lying": "default pose as exported, any yaw about Z",
+        "held": "SOCKET_GRIP on the hand bone",
+        "joint_strength": "runtime value of island-sim; optional: Loose morph weight = 1 - strength",
+        "wet": "runtime: base colour x 0.6, roughness ~0.35 (all three materials)"
+      },
+      "copyright": "IslandOne. Eigene Erstellung, keine Fremd-Assets.",
+      "glb_kb": 422.0
+    },
+    "StickStick": {
+      "asset_id": "IO_Bound_A_StickStick",
+      "family": "IO_Bound_A",
+      "kit": "bound_v1",
+      "category": "crafted",
+      "sim_kind": "bound",
+      "parts": {
+        "sticks": [
+          "IO_Branch_A",
+          "IO_Branch_A (turned 62 deg, spun 180 deg)"
+        ],
+        "crossing": "near the thick ends (END_A), 0.11 m from the broken ends",
+        "member_A_radius_m": 0.0211,
+        "member_B_radius_m": 0.0211,
+        "B_Flat": 0.0,
+        "cross_angle_deg": 62.0
+      },
+      "variant": "StickStick",
+      "usage": "a bound item: two found pieces tied together by hand with fibre; the simulation stores the parts and the joint strength",
+      "pivot": "GRIP point projected onto the ground (Z = 0); stick axis along +X, head / joint towards +X",
+      "rest_tilt_deg": 1.24,
+      "rope_below_ground_m": -0.004,
+      "lods": [
+        {
+          "node": "IO_Bound_A_StickStick_LOD0",
+          "tris": 1150,
+          "verts": 913,
+          "budget": [
+            600,
+            1500
+          ],
+          "in_budget": true,
+          "materials": [
+            "IO_MAT_Wood_Bark",
+            "IO_MAT_Fiber_Dry"
+          ],
+          "wrap_verts": 325,
+          "lod_max_distance_m": 10
+        },
+        {
+          "node": "IO_Bound_A_StickStick_LOD1",
+          "tris": 384,
+          "verts": 400,
+          "budget": [
+            250,
+            600
+          ],
+          "in_budget": true,
+          "materials": [
+            "IO_MAT_Wood_Bark",
+            "IO_MAT_Fiber_Dry"
+          ],
+          "wrap_verts": 96,
+          "lod_max_distance_m": 25
+        },
+        {
+          "node": "IO_Bound_A_StickStick_LOD2",
+          "tris": 152,
+          "verts": 144,
+          "budget": [
+            80,
+            200
+          ],
+          "in_budget": true,
+          "materials": [
+            "IO_MAT_Wood_Bark",
+            "IO_MAT_Fiber_Dry"
+          ],
+          "wrap_verts": 36,
+          "lod_max_distance_m": 50
+        }
+      ],
+      "lod_nodes": [
+        "IO_Bound_A_StickStick_LOD0",
+        "IO_Bound_A_StickStick_LOD1",
+        "IO_Bound_A_StickStick_LOD2"
+      ],
+      "lod_max_distance_m": [
+        10,
+        25,
+        50
+      ],
+      "cull_distance_m": 70,
+      "dimensions_m": [
+        0.8859,
+        0.7895,
+        0.1371
+      ],
+      "bbox_min_m": [
+        -0.4864,
+        -0.6372,
+        -0.004
+      ],
+      "bbox_max_m": [
+        0.3995,
+        0.1523,
+        0.1331
+      ],
+      "material_ids": [
+        "IO_MAT_Wood_Bark",
+        "IO_MAT_Fiber_Dry"
+      ],
+      "collision_node": "IO_Bound_A_StickStick_COL",
+      "collision_type": "capsule along each stick (square prism with pointed ends)",
+      "collision_primitive": [
+        {
+          "p0": [
+            0.3359,
+            0.0018,
+            0.0234
+          ],
+          "p1": [
+            -0.4864,
+            0.0018,
+            0.0219
+          ],
+          "radius": 0.024,
+          "p0_gltf": [
+            0.3359,
+            0.0234,
+            -0.0018
+          ],
+          "p1_gltf": [
+            -0.4864,
+            0.0219,
+            -0.0018
+          ]
+        },
+        {
+          "p0": [
+            0.2829,
+            0.0913,
+            0.06
+          ],
+          "p1": [
+            -0.1032,
+            -0.6346,
+            0.0702
+          ],
+          "radius": 0.024,
+          "p0_gltf": [
+            0.2829,
+            0.06,
+            -0.0913
+          ],
+          "p1_gltf": [
+            -0.1032,
+            0.0702,
+            0.6346
+          ]
+        }
+      ],
+      "collision_tris": 32,
+      "collision_zmin": -0.0021,
+      "sockets": {
+        "GRIP": {
+          "pos_blender": [
+            0.0,
+            -0.0,
+            0.0219
+          ],
+          "pos_gltf": [
+            0.0,
+            0.0219,
+            0.0
+          ],
+          "rot_gltf_xyzw": [
+            -0.0,
+            -0.0,
+            0.0009,
+            1.0
+          ],
+          "x_axis": [
+            1.0,
+            -0.0,
+            0.0018
+          ],
+          "z_axis": [
+            -0.0018,
+            0.0,
+            1.0
+          ],
+          "purpose": "hand: attach to the hand bone (held state); +X along the stick towards the head"
+        },
+        "HEAD": {
+          "pos_blender": [
+            0.3359,
+            0.0018,
+            0.0234
+          ],
+          "pos_gltf": [
+            0.3359,
+            0.0234,
+            -0.0018
+          ],
+          "rot_gltf_xyzw": [
+            -0.0,
+            -0.0,
+            0.0009,
+            1.0
+          ],
+          "x_axis": [
+            1.0,
+            -0.0,
+            0.0018
+          ],
+          "z_axis": [
+            -0.0018,
+            0.0,
+            1.0
+          ],
+          "purpose": "bound end of stick 1 (broken end next to the joint); +X out of the end"
+        },
+        "JOINT": {
+          "pos_blender": [
+            0.2249,
+            -0.0042,
+            0.0423
+          ],
+          "pos_gltf": [
+            0.2249,
+            0.0423,
+            0.0042
+          ],
+          "rot_gltf_xyzw": [
+            -0.0102,
+            -0.0,
+            0.0009,
+            0.9999
+          ],
+          "x_axis": [
+            1.0,
+            -0.0,
+            0.0018
+          ],
+          "z_axis": [
+            -0.0018,
+            0.0204,
+            0.9998
+          ],
+          "purpose": "contact point of the two parts inside the binding; +X along member A (stick), +Z towards member B"
+        }
+      },
+      "morph_targets": {
+        "Loose": "weak joint: wrap turns 18 % wider and sagging 6 mm; weight = 1 - joint_strength (or any curve the renderer likes); bark and stone do not move"
+      },
+      "states": {
+        "lying": "default pose as exported, any yaw about Z",
+        "held": "SOCKET_GRIP on the hand bone",
+        "joint_strength": "runtime value of island-sim; optional: Loose morph weight = 1 - strength",
+        "wet": "runtime: base colour x 0.6, roughness ~0.35 (all three materials)"
+      },
+      "copyright": "IslandOne. Eigene Erstellung, keine Fremd-Assets.",
+      "glb_kb": 365.7
+    }
+  },
+  "conventions": {
+    "up": "Blender +Z (glTF +Y)",
+    "units": "metres",
+    "long_axis": "+X (GRIP -> HEAD / JOINT)",
+    "pivot": "GRIP point projected onto the ground (Z = 0)",
+    "transforms": "applied; root and LOD nodes without rotation or scale",
+    "socket_axes": "local +X along the stick towards the head, local +Z = socket normal (glTF +Y)"
+  },
+  "binding": {
+    "source": "IO_Fiber_Binding_A JointWrap: build_wrap() of fiber/islandone_fiber.py, same turns per LOD, tail, material, UV layout and COLOR_0",
+    "rope_radius_m": 0.0045,
+    "fiber_kit_rope_radius_m": 0.011,
+    "lay_length_m": 0.0368,
+    "StickStick": "JointWrap loop path for two round members (RA = RB = stick radius), Cross_Angle 62.0 deg",
+    "StickStone": "turns are the convex hull of haft and stone sections (tight), two diagonal families tilted +-20.0 deg, B_Flat-like box shape comes from the stone itself"
+  },
+  "materials": {
+    "IO_MAT_Wood_Bark": {
+      "from": "IO_Branch_A",
+      "files": [
+        "../branch/textures/T_IO_Branch_Bark_BaseColor.png",
+        "../branch/textures/T_IO_Branch_Bark_Roughness.png",
+        "../branch/textures/T_IO_Branch_Bark_Normal.png"
+      ],
+      "size_px": 512
+    },
+    "IO_MAT_Rock_Gray": {
+      "from": "IO_Stone_Small_D",
+      "files": [
+        "../stone/textures/IO_Stone_Small_D_LOD0_BaseColor.png",
+        "../stone/textures/IO_Stone_Small_D_LOD0_Roughness.png",
+        "../stone/textures/IO_Stone_Small_D_LOD0_Normal.png",
+        "../stone/textures/IO_Stone_Small_D_LOD1_BaseColor.png",
+        "../stone/textures/IO_Stone_Small_D_LOD1_Roughness.png",
+        "../stone/textures/IO_Stone_Small_D_LOD1_Normal.png",
+        "../stone/textures/IO_Stone_Small_D_LOD2_BaseColor.png",
+        "../stone/textures/IO_Stone_Small_D_LOD2_Roughness.png",
+        "../stone/textures/IO_Stone_Small_D_LOD2_Normal.png"
+      ],
+      "size_px": [
+        256,
+        128,
+        64
+      ],
+      "note": "one texture set per LOD, as in the stone's own GLB"
+    },
+    "IO_MAT_Fiber_Dry": {
+      "from": "IO_Fiber_Binding_A",
+      "files": [
+        "../fiber/textures/T_IO_Fiber_Dry_BaseColor.png",
+        "../fiber/textures/T_IO_Fiber_Dry_Roughness.png",
+        "../fiber/textures/T_IO_Fiber_Dry_Normal.png"
+      ],
+      "size_px": 512
+    }
+  },
+  "material_count": 3,
+  "new_textures": 0,
+  "copyright": "IslandOne. Eigene Erstellung, keine Fremd-Assets.",
+  "credits": {
+    "author": "IslandOne",
+    "license": "proprietary, IslandOne project",
+    "source": "assembled by islandone_bound.py from IO_Branch_A, IO_Stone_Small_D and the IO_Fiber_Binding_A JointWrap generator; no third-party models, textures or scans"
+  },
+  "reimport_check": {
+    "StickStone": {
+      "tris": {
+        "LOD0": 1202,
+        "LOD1": 398,
+        "LOD2": 152
+      },
+      "images": 15,
+      "gltf_materials": 5,
+      "nodes": [
+        "IO_Bound_A_StickStone_COL",
+        "IO_Bound_A_StickStone_LOD0",
+        "IO_Bound_A_StickStone_LOD1",
+        "IO_Bound_A_StickStone_LOD2",
+        "SOCKET_GRIP",
+        "SOCKET_HEAD",
+        "SOCKET_JOINT",
+        "IO_Bound_A_StickStone"
+      ],
+      "morph_targets": [
+        "Loose"
+      ],
+      "problems": [],
+      "ok": true
+    },
+    "StickStick": {
+      "tris": {
+        "LOD0": 1150,
+        "LOD1": 384,
+        "LOD2": 152
+      },
+      "images": 6,
+      "gltf_materials": 2,
+      "nodes": [
+        "IO_Bound_A_StickStick_COL",
+        "IO_Bound_A_StickStick_LOD0",
+        "IO_Bound_A_StickStick_LOD1",
+        "IO_Bound_A_StickStick_LOD2",
+        "SOCKET_GRIP",
+        "SOCKET_HEAD",
+        "SOCKET_JOINT",
+        "IO_Bound_A_StickStick"
+      ],
+      "morph_targets": [
+        "Loose"
+      ],
+      "problems": [],
+      "ok": true
+    }
+  },
+  "reimport_check_all_ok": true
+}
