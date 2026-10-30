@@ -2,3 +2,7 @@ node_modules
 dist
 .DS_Store
 .vercel
+
+# Blender source packages (.blend, textures, QA renders) stay local.
+# Game-ready GLBs live in island-render/public/assets.
+/assets/
