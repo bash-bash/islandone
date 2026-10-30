@@ -29,6 +29,8 @@ export interface AssetDef {
   vertexColorsAreData?: boolean;
   /** Fish: vertex-shader swim wave (fishSwim.ts). */
   swim?: boolean;
+  /** Child nodes that start hidden, e.g. the second state of a two-state asset. */
+  hidden?: RegExp;
 }
 
 const PALM_WIND: WindSettings = { height: 6.6, sway: 0.2, flutter: 0.045, speed: 0.9 };
@@ -84,6 +86,8 @@ export const ASSETS = {
   IO_Fish_A: { url: "fish/IO_Fish_A.glb", lod: [6, 15, 35], castShadow: false, swim: true, vertexColorsAreData: true },
   IO_Bound_A_StickStick: { url: "bound/IO_Bound_A_StickStick.glb", lod: [10, 25, 50], castShadow: true },
   IO_Bound_A_StickStone: { url: "bound/IO_Bound_A_StickStone.glb", lod: [10, 25, 50], castShadow: true },
+  IO_Palm_Coconut_A: { url: "palm/IO_Palm_Coconut_A.glb", lod: [25, 50, 90, 400], castShadow: true, wind: PALM_WIND },
+  IO_Coconut_A: { url: "palm/IO_Coconut_A.glb", lod: [6, 15, 35, 60], castShadow: false, hidden: /_Coconut_Open$/ },
 } satisfies Record<string, AssetDef>;
 
 export type AssetId = keyof typeof ASSETS;
@@ -162,12 +166,12 @@ export class AssetLibrary {
   }
 
   /** Collect LOD nodes by index and hide collision proxies in a freshly instantiated hierarchy. */
-  private prepare(root: Node): Node[] {
+  private prepare(root: Node, hidden?: RegExp): Node[] {
     const levels: Node[] = [];
     for (const n of root.getDescendants(false)) {
       const lod = LOD_NAME.exec(n.name);
       if (lod) levels[Number(lod[1])] = n;
-      else if (COL_NAME.test(n.name)) n.setEnabled(false);
+      else if (COL_NAME.test(n.name) || hidden?.test(n.name)) n.setEnabled(false);
     }
     // Assets without LOD nodes (e.g. the hut, whose root mesh is LOD0) count as a single level.
     if (levels.length === 0) levels.push(root);
@@ -178,7 +182,7 @@ export class AssetLibrary {
     return this.load(id).then((c) => {
       const inst = c.instantiateModelsToScene((src) => `${name}/${src}`, false, { doNotInstantiate: true });
       const root = inst.rootNodes[0];
-      return { root, levels: this.prepare(root) };
+      return { root, levels: this.prepare(root, (ASSETS[id] as AssetDef).hidden) };
     });
   }
 
@@ -223,7 +227,7 @@ export class AssetLibrary {
     for (const level of levels) if (level !== keep) level.setEnabled(false);
 
     const meshes = [keep, ...keep.getDescendants(false)].filter(
-      (n): n is Mesh => n instanceof Mesh && n.getTotalVertices() > 0,
+      (n): n is Mesh => n instanceof Mesh && n.isEnabled(false) && n.getTotalVertices() > 0,
     );
     const placementMatrices = placements.map(placementMatrix);
     for (const mesh of meshes) {
