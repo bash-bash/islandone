@@ -8,17 +8,21 @@ import {
   type ShadowGenerator,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
-import { moveWithCollision, type CollisionWorld } from "./collision";
+import { CHARACTER_RADIUS, DEEPEST_WADE, MAX_STEP_DOWN, MAX_STEP_UP, groundAt, moveWithCollision, type CollisionWorld } from "./collision";
+import { buildWalkGrid, findPath, type Point, type WalkGrid } from "./pathfind";
 
 // IO_Character_A (assets/character/character.json): 1.75 m, Mixamo skeleton, faces +Z.
 // IslandOne's figure is autonomous; the viewer watches and does not steer it. island-sim
 // drives it through `goTo` (src/sim/feedPlayer.ts); without a feed it wanders between camp
-// spots on its own and idles in between. Walks straight and slides along obstacles (collision.ts); no path finding.
+// spots on its own and idles in between. Finds a way around obstacles (pathfind.ts) and slides along them
+// (collision.ts); when it gets stuck anyway it looks for a new way from where it stands.
 
 const URL = import.meta.env.BASE_URL + "assets/character/IO_Character_A.glb";
 const WALK_SPEED = 1.25; // m/s, matches the in-place Walk clip at this scale
 const TURN_SPEED = 6; // rad/s
 const BLEND_SPEED = 4; // weight per second
+const WAYPOINT_REACHED = 0.3; // m: close enough to a corner to head for the next one
+const MAX_REPLANS = 3; // new ways tried after getting stuck before giving up on a target
 
 /** Stand-in behaviour until island-sim: places it likes to go to (fire, woodpile, workbench, shore, camp). */
 const SPOTS: [number, number][] = [
@@ -80,16 +84,31 @@ export async function createCharacter(
 
   let target: Vector3 | null = null;
   let world: CollisionWorld = { circles: [], boxes: [], decks: [] };
+  let grid: WalkGrid | null = null;
+  let path: Point[] = []; // corners still ahead, the last one is the target
+  let replans = 0;
   let stuckFor = 0;
   let idleFor = 1;
   let spot = 0;
   let wander = true;
 
+  /** Plans a way from where it stands to `target`; without one it walks straight at it. */
+  const plan = () => {
+    if (!target) return;
+    const p = root.position;
+    path = (grid && findPath(grid, { x: p.x, z: p.z }, { x: target.x, z: target.z })) ?? [{ x: target.x, z: target.z }];
+    stuckFor = 0;
+  };
+  const setTarget = (point: Vector3) => {
+    target = point.clone();
+    replans = 0;
+    plan();
+  };
+
   return {
     root,
     goTo(point) {
-      target = point.clone();
-      stuckFor = 0;
+      setTarget(point);
       wander = false;
     },
     get walking() {
@@ -97,26 +116,43 @@ export async function createCharacter(
     },
     setCollision(w) {
       world = w;
+      grid = buildWalkGrid(w, {
+        radius: CHARACTER_RADIUS,
+        maxStep: Math.min(MAX_STEP_UP, MAX_STEP_DOWN),
+        deepestWade: DEEPEST_WADE,
+        ground: (x, z) => groundAt(w, x, z),
+      });
+      plan();
     },
     update(dt: number) {
       let move: Vector3 | null = null;
       let speed = WALK_SPEED;
+      if (target && stuckFor > 0.6 && replans < MAX_REPLANS) {
+        replans++;
+        plan();
+      }
       if (target) {
-        const to = target.subtract(root.position);
-        to.y = 0;
+        // Skip corners already reached; the last waypoint is the target itself.
+        let next = path[0] ?? target;
+        const p = root.position;
+        while (path.length > 1 && Math.hypot(next.x - p.x, next.z - p.z) < WAYPOINT_REACHED) {
+          path.shift();
+          next = path[0]!;
+        }
+        const to = new Vector3(next.x - p.x, 0, next.z - p.z);
         const dist = to.length();
-        if (dist < 0.1 || stuckFor > 0.6) {
+        if ((path.length <= 1 && dist < 0.1) || stuckFor > 0.6) {
           target = null;
+          path = [];
           idleFor = 3 + Math.random() * 4;
         } else {
           move = to;
-          speed = Math.min(speed, dist / Math.max(dt, 1e-3));
+          if (path.length <= 1) speed = Math.min(speed, dist / Math.max(dt, 1e-3));
         }
       } else if (wander && (idleFor -= dt) <= 0) {
         spot = (spot + 1 + Math.floor(Math.random() * (SPOTS.length - 1))) % SPOTS.length;
         const [x, z] = SPOTS[spot];
-        target = new Vector3(x, 0, z);
-        stuckFor = 0;
+        setTarget(new Vector3(x, 0, z));
       }
 
       let walking = false;
