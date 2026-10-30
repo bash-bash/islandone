@@ -12,6 +12,7 @@ import {
   type ShadowGenerator,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
+import { addFishSwim } from "./fishSwim";
 import { addWind, type WindSettings } from "./wind";
 
 /**
@@ -24,11 +25,18 @@ export interface AssetDef {
   lod: number[];
   castShadow: boolean;
   wind?: WindSettings;
+  /** COLOR_0 carries wind / swim data, not a tint: keep it out of the albedo. */
+  vertexColorsAreData?: boolean;
+  /** Fish: vertex-shader swim wave (fishSwim.ts). */
+  swim?: boolean;
+  /** Child nodes that start hidden, e.g. the second state of a two-state asset. */
+  hidden?: RegExp;
 }
 
 const PALM_WIND: WindSettings = { height: 6.6, sway: 0.2, flutter: 0.045, speed: 0.9 };
 const BUSH_WIND: WindSettings = { height: 1.2, sway: 0.05, flutter: 0.025, speed: 1.4 };
 const GRASS_WIND: WindSettings = { height: 0.45, sway: 0.06, flutter: 0.015, speed: 1.8 };
+const SHRUB_WIND: WindSettings = { height: 0.8, sway: 0.04, flutter: 0.02, speed: 1.5 };
 
 const BASE = import.meta.env.BASE_URL + "assets/";
 
@@ -57,6 +65,29 @@ export const ASSETS = {
   IO_Workbench_A: { url: "workbench/IO_Workbench_A.glb", lod: [15, 30, 60, 120], castShadow: true },
   IO_Seagull_A: { url: "seagull/IO_Seagull_A.glb", lod: [12, 25, 50, 90], castShadow: true },
   IO_Starfish_A: { url: "starfish/IO_Starfish_A.glb", lod: [8, 16, 30, 45], castShadow: false },
+  // Etappe 8 finds (lod from each asset's manifest: lod_max_distance_m)
+  IO_Driftwood_A: { url: "driftwood/IO_Driftwood_A.glb", lod: [12, 30, 60], castShadow: true },
+  IO_Driftwood_B: { url: "driftwood/IO_Driftwood_B.glb", lod: [12, 30, 60], castShadow: true },
+  IO_Driftwood_C: { url: "driftwood/IO_Driftwood_C.glb", lod: [12, 30, 60], castShadow: true },
+  IO_Branch_A: { url: "branch/IO_Branch_A.glb", lod: [10, 25, 50], castShadow: true },
+  IO_Branch_B: { url: "branch/IO_Branch_B.glb", lod: [10, 25, 50], castShadow: true },
+  IO_FiberPlant_A: { url: "fiber_plant/IO_FiberPlant_A.glb", lod: [15, 35, 70], castShadow: true, wind: SHRUB_WIND, vertexColorsAreData: true },
+  IO_FiberPlant_A_Leaf: { url: "fiber_plant/IO_FiberPlant_A_Leaf.glb", lod: [8, 20, 40], castShadow: false, vertexColorsAreData: true },
+  IO_FruitBush_A: { url: "fruit_bush/IO_FruitBush_A.glb", lod: [15, 35, 70], castShadow: true, wind: { height: 1.2, sway: 0.05, flutter: 0.022, speed: 1.4 }, vertexColorsAreData: true },
+  IO_Fruit_Yellow_A: { url: "fruit_bush/IO_Fruit_Yellow_A.glb", lod: [6, 15, 30], castShadow: false },
+  IO_BerryBush_Red_A: { url: "berry_bush/IO_BerryBush_Red_A.glb", lod: [15, 35, 70], castShadow: true, wind: SHRUB_WIND, vertexColorsAreData: true },
+  IO_Shellfish_A: { url: "shellfish/IO_Shellfish_A.glb", lod: [10, 25, 50], castShadow: false },
+  IO_Shellfish_A_Single: { url: "shellfish/IO_Shellfish_A_Single.glb", lod: [4, 10, 20], castShadow: false },
+  IO_PalmFrond_Fallen_A: { url: "palm_frond/IO_PalmFrond_Fallen_A.glb", lod: [12, 30, 60], castShadow: true },
+  IO_PalmFrond_Fallen_B: { url: "palm_frond/IO_PalmFrond_Fallen_B.glb", lod: [12, 30, 60], castShadow: true },
+  IO_Stone_Small_B: { url: "stone/IO_Stone_Small_B.glb", lod: [8, 18, 35], castShadow: false },
+  IO_Stone_Small_C: { url: "stone/IO_Stone_Small_C.glb", lod: [8, 18, 35], castShadow: false },
+  IO_Stone_Small_D: { url: "stone/IO_Stone_Small_D.glb", lod: [8, 18, 35], castShadow: false },
+  IO_Fish_A: { url: "fish/IO_Fish_A.glb", lod: [6, 15, 35], castShadow: false, swim: true, vertexColorsAreData: true },
+  IO_Bound_A_StickStick: { url: "bound/IO_Bound_A_StickStick.glb", lod: [10, 25, 50], castShadow: true },
+  IO_Bound_A_StickStone: { url: "bound/IO_Bound_A_StickStone.glb", lod: [10, 25, 50], castShadow: true },
+  IO_Palm_Coconut_A: { url: "palm/IO_Palm_Coconut_A.glb", lod: [25, 50, 90, 400], castShadow: true, wind: PALM_WIND },
+  IO_Coconut_A: { url: "palm/IO_Coconut_A.glb", lod: [6, 15, 35, 60], castShadow: false, hidden: /_Coconut_Open$/ },
 } satisfies Record<string, AssetDef>;
 
 export type AssetId = keyof typeof ASSETS;
@@ -121,8 +152,10 @@ export class AssetLibrary {
       this.onProgress?.(this.stats);
       p = LoadAssetContainerAsync(BASE + ASSETS[id].url, this.scene).then((c) => {
         // Instances share the container's materials, so the wind plugin goes on once here.
-        const wind = (ASSETS[id] as AssetDef).wind;
-        if (wind) for (const m of c.materials) addWind(m, wind);
+        const def = ASSETS[id] as AssetDef;
+        if (def.wind) for (const m of c.materials) addWind(m, def.wind);
+        if (def.swim) for (const m of c.materials) addFishSwim(m);
+        if (def.vertexColorsAreData) for (const m of c.meshes) m.useVertexColors = false;
         this.stats.loaded++;
         this.onProgress?.(this.stats);
         return c;
@@ -133,12 +166,12 @@ export class AssetLibrary {
   }
 
   /** Collect LOD nodes by index and hide collision proxies in a freshly instantiated hierarchy. */
-  private prepare(root: Node): Node[] {
+  private prepare(root: Node, hidden?: RegExp): Node[] {
     const levels: Node[] = [];
     for (const n of root.getDescendants(false)) {
       const lod = LOD_NAME.exec(n.name);
       if (lod) levels[Number(lod[1])] = n;
-      else if (COL_NAME.test(n.name)) n.setEnabled(false);
+      else if (COL_NAME.test(n.name) || hidden?.test(n.name)) n.setEnabled(false);
     }
     // Assets without LOD nodes (e.g. the hut, whose root mesh is LOD0) count as a single level.
     if (levels.length === 0) levels.push(root);
@@ -149,7 +182,7 @@ export class AssetLibrary {
     return this.load(id).then((c) => {
       const inst = c.instantiateModelsToScene((src) => `${name}/${src}`, false, { doNotInstantiate: true });
       const root = inst.rootNodes[0];
-      return { root, levels: this.prepare(root) };
+      return { root, levels: this.prepare(root, (ASSETS[id] as AssetDef).hidden) };
     });
   }
 
@@ -194,7 +227,7 @@ export class AssetLibrary {
     for (const level of levels) if (level !== keep) level.setEnabled(false);
 
     const meshes = [keep, ...keep.getDescendants(false)].filter(
-      (n): n is Mesh => n instanceof Mesh && n.getTotalVertices() > 0,
+      (n): n is Mesh => n instanceof Mesh && n.isEnabled(false) && n.getTotalVertices() > 0,
     );
     const placementMatrices = placements.map(placementMatrix);
     for (const mesh of meshes) {
